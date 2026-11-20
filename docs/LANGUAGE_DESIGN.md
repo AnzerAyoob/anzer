@@ -1,21 +1,34 @@
 # Language Design
 
-## Design goals
+## Current direction
 
-1. A single source file should be able to describe a simple web page.
-2. Syntax should be readable and distinctive—not HTML, CSS, and JavaScript pasted together.
-3. Style and behavior should have clear boundaries within the unified language.
-4. Compilation should be deterministic and produce inspectable standards-based files.
-5. Errors should be understandable and point to source locations.
+Anzer is a unified web authoring language, initially focused on generating browser-compatible websites. The first target is not a general-purpose programming language.
+
+The design should prioritize a cohesive, learnable syntax. Structure, styling, and behavior should be expressed in the same source language, with clear rules and separate compiler stages.
+
+## Proposed syntax model
+
+- `page` establishes the document.
+- Content declarations establish structure.
+- `style` blocks express visual properties.
+- `on event` blocks describe interaction.
+- The compiler emits standard HTML, CSS, and JavaScript.
+
+This is a proposal; syntax is not ratified.
+
+## Design constraints
+
+- Simplicity and consistency.
+- Avoid redundant syntax and excessive punctuation.
+- Preserve accessibility semantics.
+- Deterministic output.
+- Safe escaping and validation.
+- Avoid mixing parsing with code generation.
+
+## Process
+
+Design the semantics and intended behavior of constructs alongside their syntax. Validate proposed syntax against realistic page examples before choosing implementation details.
 
 ## Open questions
 
-- What are the canonical page and element constructs?
-- How should style declarations be expressed?
-- What is the event syntax?
-- How are expressions and values represented?
-- How should escaping and raw HTML be handled?
-- How do reusable components and imports work?
-- What is the security model for generated behavior?
-
-These questions must be resolved in the specification before implementation becomes tightly coupled to a syntax.
+See [SYNTAX.md](SYNTAX.md) and [specification v0.1](../specification/VERSION_0.1.md).

@@ -1,6 +1,6 @@
 # Decision Log
 
-Decisions are recorded here as the project develops. Revisit entries only when there is a clear reason.
+Decisions are recorded as the project develops. Revisit only when there is a concrete reason.
 
 ## D-001: Project name and extension
 - **Decision:** Anzer; source extension `.anzer`.
@@ -23,5 +23,9 @@ Decisions are recorded here as the project develops. Revisit entries only when t
 - **Status:** Open.
 
 ## D-006: Syntax
-- **Decision:** Not finalized. Existing examples are drafts only.
+- **Decision:** Syntax is not finalized. Drafts must be reviewed against examples before implementation.
 - **Status:** Open.
+
+## D-007: v0.1 compiler scope
+- **Decision:** The first compiler milestone should produce a static browser page from one source file, including structure, style, and one basic interaction.
+- **Status:** Accepted as milestone goal; grammar remains open.

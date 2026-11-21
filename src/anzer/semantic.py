@@ -28,7 +28,7 @@ KNOWN_PROPERTIES = set().union(*ELEMENT_STYLE_ALLOWLIST.values()) | NON_STYLE_PR
 
 COLOR_NAMES = set("""aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgrey darkgreen darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod gray grey green greenyellow honeydew hotpink indianred indigo ivory khaki lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgrey lightgreen lightpink lightsalmon lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen transparent currentcolor""".split())
 UNIT_ALIASES = {'pixel':'px','pixels':'px','percent':'%','percentage':'%','viewport width':'vw','viewport height':'vh','viewport minimum':'vmin','viewport maximum':'vmax','centimetre':'cm','centimetres':'cm','centimeter':'cm','centimeters':'cm','millimetre':'mm','millimetres':'mm','millimeter':'mm','millimeters':'mm','inch':'in','inches':'in','point':'pt','points':'pt','pica':'pc','picas':'pc'}
-LENGTH_RE = re.compile(r'^([+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+))\\s*([a-z%]*)$', re.I)
+LENGTH_RE = re.compile(r'^([+-]?(?:\d+(?:\.\d*)?|\.\d+))\.*([a-z%]*)$', re.I)
 SUPPORTED_UNITS = {'px','%','em','rem','vw','vh','vmin','vmax','ch','ex','cm','mm','in','pt','pc'}
 def _length(token, allow_negative=False, allow_auto=False, allow_none=False):
     t = token.strip().lower()
@@ -174,7 +174,7 @@ class SemanticValidator:
             if not 1<=len(parts)<=2 or any(not _length(x) for x in parts): self._error(f"Invalid gap value for '{n}'",span,'SEMLOUT005')
         elif n in {'grid-template-columns','grid-template-rows','grid-auto-columns','grid-auto-rows'}:
             parts=s.split()
-            if not parts or any(not (x in {'auto','min-content','max-content'} or re.fullmatch(r'(?:\\d+(?:\\.\\d*)?|\\.\\d+)fr',x) and float(x[:-2])>0 or _length(x)) for x in parts): self._error(f"Invalid grid track value for '{n}'",span,'SEMLOUT005')
+            if not parts or any(not (x in {'auto','min-content','max-content'} or re.fullmatch(r'(?:\d+(?:\.\d*)?|\.\d+)fr',x) and float(x[:-2])>0 or _length(x)) for x in parts): self._error(f"Invalid grid track value for '{n}'",span,'SEMLOUT005')
     def _url(self,value,allowed,span,code):
         value=str(value).strip(); parsed=urlparse(value)
         if not value or value.startswith("//") or (parsed.scheme and parsed.scheme.lower() not in allowed): self._error(f"Invalid or unsupported URL '{value}'",span,code)

@@ -1,0 +1,18 @@
+<anzer start>
+
+anzer make title:
+    text="Contact Us";
+
+anzer make input:
+    type="text",
+    placeholder="Your name";
+
+anzer make input:
+    type="email",
+    placeholder="Your email";
+
+anzer make button:
+    text="Submit",
+    on click="show message: Form submitted";
+
+<anzer end>

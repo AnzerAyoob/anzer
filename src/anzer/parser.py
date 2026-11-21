@@ -115,7 +115,9 @@ class Parser:
                 self._recover_statement()
                 return None
             self._advance()
-            props=self._parse_properties()
+            props,style_reference=self._parse_properties()
+            if style_reference is not None:
+                self._error("Style declarations cannot reference another style",style_number,"PARSTYLE004")
             if self._current().value!=";":
                 self._error("Expected ';' after style declaration",self._current(),"PARSTYLE003")
                 self._recover_statement()
@@ -125,9 +127,10 @@ class Parser:
             style_name=f"{name} style {style_number.value}"
             return StyleDeclaration(style_name,name,tuple(props),self._span(begin.location.offset,close.location.offset+1))
         props=[]
+        style_reference=None
         if self._current().value==":":
             self._advance()
-            props=self._parse_properties()
+            props,style_reference=self._parse_properties()
         if self._current().value=="{":
             open_tok=self._advance()
             children=[]
@@ -138,18 +141,19 @@ class Parser:
                 if child: children.append(child)
             if self._current().value=="}":
                 close=self._advance()
-                return ElementDeclaration(name,tuple(props),tuple(children),None,self._span(begin.location.offset,close.location.offset+1))
+                return ElementDeclaration(name,tuple(props),style_reference,self._span(begin.location.offset,close.location.offset+1))
             self._error("Unclosed container",open_tok,"PARDECL005")
             return ElementDeclaration(name,tuple(props),tuple(children),None,self._span(begin.location.offset,self._current().location.offset))
         if self._current().value==";":
             close=self._advance()
-            return ElementDeclaration(name,tuple(props),None,None,self._span(begin.location.offset,close.location.offset+1))
+            return ElementDeclaration(name,tuple(props),style_reference,self._span(begin.location.offset,close.location.offset+1))
         self._error("Expected ';' or '{' after declaration",self._current(),"PARDECL006")
         self._recover_statement()
         return None
 
     def _parse_properties(self):
         props=[]
+        style_reference=None
         seen_names=set()
         while self._current().kind!=TokenKind.EOF and self._current().value not in (";","{","}"):
             name_start=self._current()
@@ -166,6 +170,7 @@ class Parser:
                 name_tokens.append(self._advance())
             raw_name=" ".join(token.value for token in name_tokens)
             name=self._canonical_property_name(raw_name)
+            is_style_reference=(raw_name=="use style")
             if self._current().value!="=":
                 self._error("Expected '=' after property name",self._current(),"PARPROP002")
                 self._recover_property()
@@ -185,7 +190,14 @@ class Parser:
                     value=int(value) if "." not in value else float(value)
                 except ValueError:
                     pass
-            if name in seen_names:
+            if is_style_reference:
+                if value_tok.kind!=TokenKind.STRING:
+                    self._error("Style reference must be a string",value_tok,"PARSTYLE005")
+                elif style_reference is not None:
+                    self._error("Duplicate style reference",name_start,"PARSTYLE006")
+                else:
+                    style_reference=value
+            elif name in seen_names:
                 self._error(f"Duplicate property '{name}' after normalization",name_start,"PARPROP005")
             else:
                 seen_names.add(name)
@@ -195,7 +207,8 @@ class Parser:
             elif self._current().value not in (";","{","}"):
                 self._error("Expected ',' between properties",self._current(),"PARPROP004")
                 self._recover_property()
-        return props
+        return props,style_reference
+
 
     def _recover_property(self):
         while self._current().kind!=TokenKind.EOF and self._current().value not in (",",";","{","}"):

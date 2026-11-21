@@ -1,0 +1,24 @@
+<anzer start>
+
+anzer make title:
+    text="Local News Article";
+
+anzer make paragraph style 1:
+    type="paragraph",
+    font="Arial",
+    text-size="16px",
+    color="#333333";
+
+anzer make paragraph:
+    use style="paragraph style 1",
+    text="Article lead goes here.";
+
+anzer make paragraph:
+    use style="paragraph style 1",
+    text="The first body paragraph goes here.";
+
+anzer make paragraph:
+    use style="paragraph style 1",
+    text="The second body paragraph goes here.";
+
+<anzer end>

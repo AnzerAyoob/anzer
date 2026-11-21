@@ -93,4 +93,31 @@ class SemanticValidatorTests(unittest.TestCase):
         self.assertEqual(self.validate('anzer make container: display="grid", gap="10px 20px" { }'),[])
     def test_gap_negative_rejected(self):
         self.assertTrue(any(e.code=="SEMLOUT005" for e in self.validate('anzer make container: display="flex", gap="-2px" { }')))
+
+    def test_border_longhand_overrides_shorthand_regardless_of_order(self):
+        doc = self.parse('anzer make paragraph: text="x", border-color="blue", border="2px solid red";')
+        node = doc.declarations[0]
+        validator = SemanticValidator()
+        resolved = validator._resolve_properties((), node.properties, node.span)
+        self.assertEqual(resolved["border-color"].value, "blue")
+
+    def test_border_longhand_overrides_shorthand_when_declared_after(self):
+        doc = self.parse('anzer make paragraph: text="x", border="2px solid red", border-color="blue";')
+        node = doc.declarations[0]
+        validator = SemanticValidator()
+        resolved = validator._resolve_properties((), node.properties, node.span)
+        self.assertEqual(resolved["border-color"].value, "blue")
+
+    def test_direct_border_components_override_style_border_components(self):
+        doc = self.parse('anzer make paragraph style 1: border="2px solid red"; anzer make paragraph: text="x", use style="paragraph style 1", border-color="blue";')
+        node = doc.declarations[1]
+        style = doc.declarations[0]
+        validator = SemanticValidator()
+        resolved = validator._resolve_properties(style.properties, node.properties, node.span)
+        self.assertEqual(resolved["border-color"].value, "blue")
+
+    def test_protocol_relative_urls_rejected(self):
+        self.assertTrue(any(e.code == "SEMURL001" for e in self.validate('anzer make link: text="x", url="//example.com/path";')))
+        self.assertTrue(any(e.code == "SEMURL002" for e in self.validate('anzer make image: src="//example.com/image.png";')))
+
 if __name__=="__main__": unittest.main()

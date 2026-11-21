@@ -1,6 +1,6 @@
 # Core Grammar Resolution Proposal 1
 
-**Status:** Proposed — not frozen  
+**Status:** Structural decisions accepted; this proposal is historical and the decision freeze is authoritative  
 **Purpose:** Resolve the two highest-priority structural ambiguities identified in `SYNTAX_AUDIT.md` before parser implementation.
 
 ## 1. Canonical property placement
@@ -48,7 +48,7 @@ The statement terminator determines the statement shape:
 A container header may have properties. It ends with `{`, not `;`.
 
 ```anzer
-anzer make card:
+anzer make container:
     background="white",
     padding="16px" {
     anzer make title: text="Card";
@@ -70,7 +70,7 @@ Nested containers are allowed:
 
 ```anzer
 anzer make section {
-    anzer make card {
+    anzer make container {
         anzer make paragraph: text="Inside the card.";
     }
 }
@@ -120,7 +120,9 @@ The parser must not infer whether an element is a container from its semantic na
 
 The compiler can then validate whether that element is allowed to have children. This keeps parsing predictable and separates syntax errors from element/semantic errors.
 
-## 6. Still unresolved (do not freeze yet)
+## 6. Historical unresolved list — superseded
+
+The items below were unresolved when this proposal was written. Most are now decided in `ANZER_V0_1_DECISION_FREEZE_1.md`; do not treat this list as current open questions. Image-alt policy remains open.
 
 - String escape rules and multiline strings.
 - Property naming conventions and allowed value types.

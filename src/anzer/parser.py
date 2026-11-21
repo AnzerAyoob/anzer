@@ -146,7 +146,7 @@ class Parser:
             return ElementDeclaration(name,tuple(props),tuple(children),None,self._span(begin.location.offset,self._current().location.offset))
         if self._current().value==";":
             close=self._advance()
-            return ElementDeclaration(name,tuple(props),style_reference,self._span(begin.location.offset,close.location.offset+1))
+            return ElementDeclaration(name,tuple(props),None,style_reference,self._span(begin.location.offset,close.location.offset+1))
         self._error("Expected ';' or '{' after declaration",self._current(),"PARDECL006")
         self._recover_statement()
         return None

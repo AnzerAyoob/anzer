@@ -61,6 +61,10 @@ class SemanticValidatorTests(unittest.TestCase):
         self.assertTrue(any(e.code=="SEMPROP005" for e in self.validate('anzer make paragraph: text="x", font-weight="950";')))
     def test_invalid_text_alignment_rejected(self):
         self.assertTrue(any(e.code=="SEMPROP005" for e in self.validate('anzer make paragraph: text="x", text-align="middle";')))
+    def test_length_grammar_accepts_whitespace_before_unit(self):
+        self.assertEqual(self.validate('anzer make paragraph: text="x", width="12 px";'),[])
+    def test_length_grammar_rejects_repeated_decimal_points(self):
+        self.assertTrue(any(e.code=="SEMPROP005" for e in self.validate('anzer make paragraph: text="x", width="12..px";')))
     def test_invalid_unit_rejected(self):
         self.assertTrue(any(e.code=="SEMPROP005" for e in self.validate('anzer make paragraph: text="x", width="12foo";')))
     def test_min_dimensions_reject_negative(self):

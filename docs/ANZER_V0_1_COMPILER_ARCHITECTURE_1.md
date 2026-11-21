@@ -288,7 +288,7 @@ No runtime should be emitted if the document contains no toggle behavior.
 
 ## 13. Compiler API
 
-Compilation is callable independently from the CLI. The primary output is Anzer-native compiled representation (internal normalized document model), not HTML.
+Compilation is callable independently from the CLI. The internal normalized document model is compiler-only; v0.1 emits HTML. No intermediate file format exists.
 
 ```python
 compile_source(source_text: str, filename: str = "<input>") -> CompileResult
@@ -296,7 +296,7 @@ compile_source(source_text: str, filename: str = "<input>") -> CompileResult
 
 CompileResult contains success, diagnostics, and an internal normalized document model on success; no serialized intermediate file.
 
-internal normalized document model is a versioned, deterministic representation of the validated and normalized document, consumed by the Anzer runtime and future tooling. It is distinct from source syntax and HTML export.
+The internal normalized document model is a deterministic compiler data structure consumed by the renderer. It is not serialized, versioned as a file format, or exposed to users.
 
 Pipeline: `Anzer source → parse/validate/normalize → internal document model → renderer`; no separate file format.
 
@@ -317,9 +317,9 @@ HTML is the v0.1 compile output; there is no separate export command in this ini
 
 Avoid watch mode, dev server, project scaffolding, package manager, or multi-file imports in v0.1.
 
-CLI requirements: diagnostics to stderr; nonzero exit on errors; no output overwrite on failed compile; deterministic internal normalized document model; check-only creates no artifacts.
+CLI requirements: diagnostics to stderr; nonzero exit on errors; no output overwrite on failed compile; deterministic HTML output; check-only creates no artifacts.
 
-The internal normalized document model is not serialized or exposed as a file format. Initial runtime delivery (local viewer/application or other) is a separate decision; HTML may be an internal rendering mechanism but is not Anzer's required output artifact.
+The internal normalized document model is not serialized or exposed as a file format. HTML is the v0.1 output artifact. Anzer's long-term goal of replacing HTML requires a dedicated runtime/browser ecosystem; changing the extension alone cannot achieve that.
 
 ## 15. Diagnostics
 

@@ -52,7 +52,7 @@ Expected: same meaning as P2 after property normalization.
 ### P5. Number values
 
 \`\`\`anzer
-anzer make card: opacity=0.5, spacing=12, count=3;
+anzer make container: opacity=0.5, spacing=12, count=3;
 \`\`\`
 
 Expected: numeric values, not strings.
@@ -60,10 +60,10 @@ Expected: numeric values, not strings.
 ### P6. Negative number
 
 \`\`\`anzer
-anzer make card: offset=-12, opacity=-0.5;
+anzer make container: offset=-12, opacity=-0.5;
 \`\`\`
 
-Expected: numeric values accepted by lexer; semantic range validation may reject later.
+Expected: lexer accepts numeric tokens; semantic validation rejects negative opacity and accepts offset -12 only if the property catalog permits it. Assert the specific semantic diagnostic for opacity.
 
 ### P7. Boolean values
 
@@ -158,7 +158,7 @@ Expected: duplicate-property error, not first/last-wins.
 ### E7. Unsupported array
 
 \`\`\`anzer
-anzer make card: values=[1,2,3];
+anzer make container: values=[1,2,3];
 \`\`\`
 
 Expected: unsupported value type in v0.1.
@@ -166,7 +166,7 @@ Expected: unsupported value type in v0.1.
 ### E8. Unsupported null
 
 \`\`\`anzer
-anzer make card: value=null;
+anzer make container: value=null;
 \`\`\`
 
 Expected: unsupported value type.
@@ -174,7 +174,7 @@ Expected: unsupported value type.
 ### E9. Exponent notation
 
 \`\`\`anzer
-anzer make card: opacity=1e3;
+anzer make container: opacity=1e3;
 \`\`\`
 
 Expected: reject under proposed numeric grammar.
@@ -182,7 +182,7 @@ Expected: reject under proposed numeric grammar.
 ### E10. Uppercase boolean
 
 \`\`\`anzer
-anzer make card: visible=TRUE;
+anzer make container: visible=TRUE;
 \`\`\`
 
 Expected: reject; only lowercase booleans are recognized.

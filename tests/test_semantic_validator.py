@@ -49,6 +49,10 @@ class SemanticValidatorTests(unittest.TestCase):
         errors = self.validate('anzer make banana style 1: color="red";')
         self.assertTrue(any(e.code == "SEMSTYLE001" for e in errors))
 
+    def test_style_declaration_inside_container_is_rejected(self):
+        errors = self.validate('anzer make section { anzer make paragraph style 1: color="red"; }')
+        self.assertTrue(any(e.code == "SEMSTYLE005" for e in errors))
+
     def test_html_embedding_outside_container(self):
         errors = self.validate('anzer use html="<b>Hi</b>";')
         self.assertTrue(any(e.code == "SEMHTML001" for e in errors))

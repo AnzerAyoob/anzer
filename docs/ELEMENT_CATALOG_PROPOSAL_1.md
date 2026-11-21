@@ -93,9 +93,9 @@ anzer make section { id="details"
 Compiler behavior: generate a button that toggles the target's visibility. The target must resolve to a section/container ID. Missing IDs, duplicate IDs, unresolved targets, unsupported actions, or targets of the wrong element kind are semantic errors. Generated behavior must not evaluate user-provided code or inject text as HTML. Accessibility behavior (including synchronized `aria-expanded`/target state where appropriate) must be specified and tested before implementation.
 
 
-No arbitrary JavaScript, inline event handlers, alert actions, or multi-action sequences in v0.1. Links remain the navigation mechanism.
+No arbitrary JavaScript, inline event handlers, alert actions, or multi-action sequences in v0.1. Links remain the navigation mechanism. JavaScript embedding is explicitly excluded from v0.1.
 
-## Content model
+## HTML escape hatch (v0.1 proposal)\n\nAnzer may provide one escape hatch for unsupported markup:\n\n`anzer use html="...";`\n\n- Allowed only inside `section` and `container`.\n- Embedded HTML is emitted as raw HTML and is not interpreted as Anzer syntax.\n- This is trusted author content and is not inherently safe; it may contain scripts, event handlers, or other unsafe markup.\n- The compiler should preserve the embedded content as faithfully as possible and must document the security implications.\n- JavaScript embedding (`anzer use js`) is excluded from v0.1.\n\n## Content model
 
 Element text is plain text and is never interpreted as HTML. Containers may have both a `text` property and nested elements; generated output must define a consistent ordering. Proposal: render a container's direct text before its child elements. This ordering must be tested and documented. Link URLs and image sources are strings; URL scheme safety (e.g. rejecting `javascript:`) belongs in a security validation specification.
 

@@ -1,71 +1,71 @@
 # Decision Log
 
-Decisions are recorded as the project develops. Revisit accepted decisions only when there is a concrete reason.
+This log records decisions that govern Anzer. Revisit accepted decisions only when new evidence or a concrete implementation need justifies it. Current implementation status is tracked separately; a decision is not proof that a feature exists.
 
-## D-001: Project name and extension
-- **Decision:** Anzer; source extension `.anzer`.
+## D-001: Project name and source extension
+- **Decision:** The language is Anzer; source files use `.anzer`.
 - **Status:** Accepted.
 
-## D-002: Initial target
-- **Decision:** Browser websites, compiled to standard HTML, CSS, and JavaScript.
+## D-002: Long-term goal and initial target
+- **Decision:** Anzer is intended to become a human-friendly, command-oriented document language and ultimately replace HTML as the primary author-facing language. The first milestone compiles to standard browser HTML.
+- **Status:** Accepted; long-term native runtime/browser implications remain future exploration.
+
+## D-003: Single authoring source
+- **Decision:** A single `.anzer` file is the author-facing source for document structure, style, and supported behavior. Internal AST/IR/normalized structures are compiler implementation details, not additional user-facing file formats.
 - **Status:** Accepted.
 
-## D-003: Unified source
-- **Decision:** Explore one authoring file for structure, style, and behavior.
-- **Status:** Accepted.
-
-## D-004: Hosting and development
-- **Decision:** Zero-budget local development, GitHub as primary public source and documentation host.
+## D-004: Development and hosting constraints
+- **Decision:** Prioritize zero-budget local development and GitHub as the public source and documentation host.
 - **Status:** Accepted.
 
 ## D-005: Compiler implementation language
-- **Decision:** Not yet selected; Python is a practical candidate for the first prototype.
-- **Status:** Open.
+- **Decision:** Python is the implementation language for the v0.1 compiler.
+- **Status:** Accepted.
 
-## D-006: Syntax
-- **Decision:** Command-oriented syntax using `anzer make`, explicit document markers, and property-based declarations. Syntax is still provisional and must be tested before grammar freeze.
-- **Status:** Accepted direction; grammar open.
+## D-006: Command-oriented syntax
+- **Decision:** Use command-oriented syntax with explicit document markers and property-based declarations. Grammar details are governed by the frozen v0.1 specification and related grammar documents.
+- **Status:** Accepted direction; only changes supported by specification review should revise the grammar.
 
-## D-007: v0.1 compiler scope
-- **Decision:** The first compiler milestone should produce a static browser page from one source file, including structure, style, and one basic interaction.
-- **Status:** Accepted as milestone goal; grammar remains open.
+## D-007: v0.1 compiler contract
+- **Decision:** v0.1 compiles one `.anzer` source file into one self-contained HTML output. CSS is embedded; JavaScript/toggle runtime is embedded only when required. The default output replaces the source extension with `.html`.
+- **Status:** Accepted and frozen for v0.1.
 
 ## D-008: Document boundaries and formatting
-- **Decision:** Draft source uses `<anzer start>` and `<anzer end>`. Both compact single-line and multiline instruction formats must be supported with equivalent meaning.
-- **Status:** Accepted design direction.
+- **Decision:** Document boundaries use the specified Anzer markers. Compact and multiline forms are supported only where the specification defines equivalent meaning.
+- **Status:** Accepted as specified in v0.1.
 
 ## D-009: Semantic element defaults
-- **Decision:** Element commands have sensible semantic defaults. In particular, `title` defaults to H1 and generates semantic HTML H1; heading types also determine default visual presentation. Type can be overridden where compatible.
-- **Status:** Accepted design direction.
+- **Decision:** Elements use semantic defaults. The `title` element defaults to H1 and generates semantic H1 output; compatible overrides are permitted as specified.
+- **Status:** Accepted as specified in v0.1.
 
-## D-010: Numbered reusable styles
-- **Decision:** Reusable style definitions use numbered identifiers (e.g., paragraph style 1, paragraph style 2) and are independent of content position. Elements can apply a style using `use style`.
-- **Status:** Accepted design direction.
+## D-010: Reusable styles
+- **Decision:** Reusable numbered styles are independent of content position and can be applied to elements using the specified style-use syntax.
+- **Status:** Accepted as specified in v0.1.
 
-## D-011: Style property precedence
-- **Decision:** Resolve properties in order: element defaults, reusable style, direct element properties. Direct properties override style properties. When a reusable style defines the compatible semantic type, the element does not need to repeat it.
-- **Status:** Accepted design direction.
+## D-011: Style precedence
+- **Decision:** Property precedence is element defaults, reusable style, then direct element properties. Direct properties override style properties.
+- **Status:** Accepted as specified in v0.1.
 
 ## D-012: Style compatibility diagnostics
-- **Decision:** A style with a semantic type incompatible with the target element must not silently produce contradictory HTML semantics. The compiler should report a diagnostic; whether that is a warning or error is still open.
-- **Status:** Accepted principle; diagnostic severity open.
+- **Decision:** Incompatible semantic types must not silently create contradictory HTML semantics. The compiler diagnoses incompatibility according to the severity defined by the specification.
+- **Status:** Accepted principle; severity follows the spec.
 
 ## D-013: Visual presets
-- **Decision:** Named visual presets such as `soft`, `hard`, `raised`, `3D`, and `glow` may be used, but each must have standardized deterministic rendering and supported parameters.
-- **Status:** Accepted design direction.
+- **Decision:** Visual presets are deterministic and only support documented parameters and behavior.
+- **Status:** Accepted as specified in v0.1.
 
 ## D-014: Containers and nesting
-- **Decision:** Use brace-delimited container blocks for nesting. Opening `{` begins a container body and `}` closes the most recently opened container. Containers may contain elements and nested containers; empty containers are allowed. Unmatched braces and an `<anzer end>` with open containers must be diagnosed.
-- **Status:** Accepted design direction; exact grammar remains provisional.
+- **Decision:** Containers use the specified brace-delimited nesting. Empty containers are allowed; malformed/unclosed containers are diagnosed.
+- **Status:** Accepted as specified in v0.1.
 
-## D-015: Flexible style definition
-- **Decision:** Support both reusable numbered/named style definitions and inline properties attached to an element. Reusable styles are applied with `use style`; inline properties avoid defining a separate style when reuse is unnecessary. Both workflows should coexist.
-- **Status:** Accepted design direction; exact syntax remains provisional.
+## D-015: Reusable and inline styling
+- **Decision:** Reusable styles and inline element properties coexist. Use reusable definitions where reuse is helpful; inline properties for one-off declarations.
+- **Status:** Accepted as specified in v0.1.
 
-## D-016: Embeds and rich link previews
-- **Decision:** Explore a simple `anzer embed` command family for social posts, Journoist Drops, video embeds, and rich link-preview cards. The syntax should conceal provider-specific markup, with a provider adapter layer and graceful fallback to a clickable URL when embedding is unsupported or blocked.
-- **Status:** Accepted design direction for exploration; provider support, security, privacy, and syntax remain open.
+## D-016: Embeds and rich previews
+- **Decision:** Provider-neutral embeds and rich link-preview cards are an exploration, not a v0.1 implementation commitment. Any future support must address provider adapters, fallback behavior, security, and privacy.
+- **Status:** Future exploration; not part of the v0.1 contract unless explicitly specified.
 
 ## D-017: Inline hyperlinks
-- **Decision:** Ordinary hyperlinks within text must be supported separately from embeds and rich link-preview cards. Inline link syntax is under exploration; quoted/nested syntax must be stress-tested for parsing and escaping.
-- **Status:** Accepted design direction; syntax open.
+- **Decision:** Inline hyperlinks are distinct from embeds and rich preview cards. Syntax and escaping rules are governed by the v0.1 specification.
+- **Status:** Accepted only to the extent defined in v0.1; avoid treating unresolved syntax proposals as implemented features.

@@ -16,7 +16,7 @@ Properties appear after the colon in an element/style declaration.
 \`\`\`anzer
 anzer make paragraph:
     color="black",
-    text-size="16px",
+    font-size="16px",
     text="Hello";
 \`\`\`
 
@@ -55,7 +55,7 @@ Expected: syntax error; the parser must not guess where one property ends and an
 
 **Proposal: property names are case-sensitive and lowercase kebab-case.**
 
-Examples: \`text\`, \`color\`, \`text-size\`, \`background-color\`, \`use style\`.
+Examples: \`text\`, \`color\`, \`font-size\`, \`background-color\`, \`use style\`.
 
 Names should start with a lowercase letter and use lowercase letters, digits, and hyphens thereafter. The style reference \`use style\` is a special property phrase and is not an ordinary property name.
 

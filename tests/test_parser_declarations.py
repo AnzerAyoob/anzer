@@ -31,6 +31,24 @@ class DeclarationParserTests(unittest.TestCase):
         prop = doc.declarations[0].properties[0]
         self.assertEqual(source_text[prop.span.start_offset:prop.span.end_offset], 'text="Hi"')
 
+    def test_friendly_multiword_aliases_normalize(self):
+        doc, lex, errors = self.parse('anzer make section: minimum width=200, maximum-height=400, font="Arial", text-size="18px";')
+        self.assertEqual(lex, [])
+        self.assertEqual(errors, [])
+        self.assertEqual([p.name for p in doc.declarations[0].properties], ["min-width", "max-height", "font-family", "font-size"])
+
+    def test_space_and_hyphen_spellings_normalize_equally(self):
+        doc, lex, errors = self.parse('anzer make section: font style="italic", minimum   width=120;')
+        self.assertEqual(lex, [])
+        self.assertEqual(errors, [])
+        self.assertEqual([p.name for p in doc.declarations[0].properties], ["font-style", "min-width"])
+
+    def test_alias_duplicate_is_reported_after_normalization(self):
+        doc, lex, errors = self.parse('anzer make paragraph: font="Arial", font-family="Roboto";')
+        self.assertEqual(lex, [])
+        self.assertTrue(any(d.code == "PARPROP005" for d in errors))
+        self.assertEqual([p.name for p in doc.declarations[0].properties], ["font-family"])
+
     def test_multiple_properties_and_scalar_types(self):
         doc, lex, errors = self.parse('anzer make button: text="Go", width=120, active=true;')
         self.assertEqual(lex, [])

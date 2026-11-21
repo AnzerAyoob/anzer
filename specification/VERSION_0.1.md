@@ -12,7 +12,7 @@ This specification records the current design direction. Syntax is still provisi
 - Describe structure, semantics, appearance, and basic behavior in one source file.
 - Compile to standard HTML, CSS, and JavaScript for ordinary browsers and hosting.
 - Allow compact single-line and readable multiline instructions interchangeably.
-- Reduce repetition through reusable numbered style definitions.
+- Reduce repetition through reusable numbered style definitions, while allowing inline properties.
 - Keep generated output safe, accessible, and deterministic.
 
 ## 2. Non-goals for the first compiler
@@ -24,8 +24,6 @@ This specification records the current design direction. Syntax is still provisi
 - A custom runtime for simple static pages.
 
 ## 3. Document boundaries
-
-The current proposal uses explicit boundaries:
 
 ```
 <anzer start>
@@ -92,7 +90,21 @@ anzer make paragraph:
 
 When a style defines the element type, the user does not need to repeat that type on the element. Style identifiers are reusable labels, not references to content positions.
 
-## 7. Property precedence
+## 7. Inline properties
+
+Properties may also be declared directly on an element without defining a reusable style:
+
+```
+anzer make paragraph:
+    font="Arial",
+    color="black",
+    text-size="10pt",
+    text="One-off paragraph styling";
+```
+
+Both inline and reusable styles are intended to be supported. Choose inline properties for one-off elements and reusable styles when a set of properties should be shared.
+
+## 8. Property precedence
 
 Proposed resolution order, from lowest to highest:
 
@@ -102,11 +114,24 @@ Proposed resolution order, from lowest to highest:
 
 Direct properties override style properties. A style supplies a default type and appearance for compatible elements.
 
-## 8. Style compatibility
+## 9. Style compatibility
 
 If a style's semantic type conflicts with the target element, the compiler must report a diagnostic rather than silently generate contradictory semantics. The precise warning/error policy remains to be decided.
 
-## 9. Single-line and multiline formatting
+## 10. Containers and nesting
+
+The accepted design direction is brace-delimited containers:
+
+```
+anzer make section {
+    anzer make title: text="About";
+    anzer make paragraph: text="Section content";
+}
+```
+
+Opening braces begin container bodies; closing braces end the most recently opened container. Containers may nest and may be empty. Unmatched braces and document end markers encountered with open containers must be diagnosed. Exact property/style placement for containers is not yet finalized.
+
+## 11. Single-line and multiline formatting
 
 Both formats are intended to be equivalent:
 
@@ -124,11 +149,11 @@ anzer make paragraph:
 
 Whitespace and line breaks are formatting and should not change meaning, except where token separation is required.
 
-## 10. Styling presets
+## 12. Styling presets
 
 Anzer may provide named visual presets for properties such as shadows. Proposed shadow presets include `soft`, `hard`, `raised`, `3D`, and `glow`. Each preset must have defined rendering behavior rather than ambiguous interpretation. Users may customize supported parameters such as color, size, intensity, and position.
 
-## 11. Proposed example
+## 13. Proposed example
 
 ```
 <anzer start>
@@ -164,9 +189,9 @@ anzer make paragraph:
 <anzer end>
 ```
 
-This example illustrates the direction only; it is not compilable syntax yet.
+This example illustrates the direction only; it is not compilable syntax.
 
-## 12. Compilation model
+## 14. Compilation model
 
 `Source → Lexer → Parser → AST → Validation → HTML/CSS/JS Generator → Output Files`
 
@@ -175,7 +200,7 @@ Suggested outputs:
 - `dist/assets/anzer.css`
 - `dist/assets/anzer.js` (only when needed)
 
-## 13. Safety and diagnostics
+## 15. Safety and diagnostics
 
 - Escape text and attributes correctly.
 - Validate and safely emit CSS values.
@@ -184,10 +209,10 @@ Suggested outputs:
 - Errors should include source file, line, column, and actionable explanation.
 - Reject malformed input rather than emitting broken partial output.
 
-## 14. Next design validation
+## 16. Next design validation
 
 Before grammar freeze, test syntax against realistic page scenarios: a simple landing page, article/news page, multilingual content with styles, cards/sections, and a form or interaction. Identify ambiguities and revise the grammar based on those tests.
 
-## 15. Change policy
+## 17. Change policy
 
 This is a design draft, not a compatibility promise. Syntax changes are expected before implementation. Once a release is stable, changes must be documented and versioned.

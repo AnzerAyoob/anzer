@@ -1,6 +1,10 @@
 # Syntax Design — Command-Based Draft
 
+> **HISTORICAL DOCUMENT — NOT NORMATIVE.** This draft predates the v0.1 decision freeze. It is retained for design history only. Implementers must follow `docs/ANZER_V0_1_UNIFIED_SPECIFICATION.md`, `docs/ANZER_V0_1_DECISION_FREEZE_1.md`, and `docs/ANZER_V0_1_GRAMMAR_TEST_CHECKLIST.md`.
+
 **Status:** Experimental proposal. Not ratified or implemented.
+> **HISTORICAL DOCUMENT — NOT NORMATIVE.** This draft predates the v0.1 decision freeze. It is retained for design history only. Implementers must follow `docs/ANZER_V0_1_UNIFIED_SPECIFICATION.md`, `docs/ANZER_V0_1_DECISION_FREEZE_1.md`, and `docs/ANZER_V0_1_GRAMMAR_TEST_CHECKLIST.md`.
+
 
 Anzer is intended to use readable commands and properties rather than requiring authors to write HTML, CSS, and JavaScript separately.
 

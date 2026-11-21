@@ -441,15 +441,21 @@ Before v0.1 release:
 - toggle target IDs validated and safely referenced
 - output paths handled without unintended traversal or overwrite
 
-## 20. Open decisions before implementation
+## 20. Final implementation decisions
 
-Architecture does not resolve these language/product decisions:
-1. Image alt fallback policy (the existing spec open issue).
-2. Output packaging: one HTML file or separate HTML/CSS/runtime assets.
-3. Exact CLI output flags and default output naming.
-4. Whether v0.1 compiler is Python (recommended for the first implementation unless there is a deployment requirement that dictates otherwise).
+These decisions are user-approved for v0.1:
 
-These decisions should be settled before implementation where they affect renderer or CLI contracts. The remaining internal module boundaries can evolve without changing frozen language semantics.
+1. **Image alt fallback:** When alt is omitted, derive readable text from the filename: remove extension and replace hyphens/underscores with spaces. Do not require alt or default to empty alt.
+2. **Output:** Produce one self-contained HTML file. CSS is embedded; toggle runtime is embedded only when needed. Source input uses the `.anzer` extension. Compiler output is HTML, not a second Anzer source file.
+3. **CLI:**
+   - `anzer compile <input.anzer> [-o <output.html>]`
+   - `anzer check <input.anzer>`
+   - If `-o` is omitted, output defaults to the input filename with its extension replaced by `.html`.
+   - `check` validates without writing output.
+   - Compilation errors return a nonzero exit code and do not create/overwrite the output file.
+4. **Implementation language:** Python is approved for v0.1.
+
+No additional decisions are required to begin implementation. CLI and packaging can be refined without changing the language specification.
 
 ## 21. Definition of architectural completion
 

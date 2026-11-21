@@ -1,6 +1,10 @@
 # Anzer Syntax Stress Test
 
+> **HISTORICAL DOCUMENT — NOT NORMATIVE.** This draft predates the v0.1 decision freeze. It is retained for design history only. Implementers must follow `docs/ANZER_V0_1_UNIFIED_SPECIFICATION.md`, `docs/ANZER_V0_1_DECISION_FREEZE_1.md`, and `docs/ANZER_V0_1_GRAMMAR_TEST_CHECKLIST.md`.
+
 **Status:** Experimental syntax exploration. None of these examples are compiler-ready or grammar-ratified.
+> **HISTORICAL DOCUMENT — NOT NORMATIVE.** This draft predates the v0.1 decision freeze. It is retained for design history only. Implementers must follow `docs/ANZER_V0_1_UNIFIED_SPECIFICATION.md`, `docs/ANZER_V0_1_DECISION_FREEZE_1.md`, and `docs/ANZER_V0_1_GRAMMAR_TEST_CHECKLIST.md`.
+
 
 Purpose: test Anzer's command-oriented syntax against realistic web authoring patterns before implementation. These cases intentionally include syntax questions and should be reviewed for readability, consistency, ambiguity, parser feasibility, safety, and fallback behavior.
 
@@ -9,7 +13,7 @@ Purpose: test Anzer's command-oriented syntax against realistic web authoring pa
 For this round, test a consistent pattern: a container may have a style reference and/or direct properties before its opening brace. The brace begins its child body. A semicolon ends a leaf command or style definition, not a container.
 
 ```
-anzer make card use style="card style 1" {
+anzer make container use style="container style 1" {
     anzer make title: text="Card title";
 }
 ```
@@ -17,7 +21,7 @@ anzer make card use style="card style 1" {
 Inline container properties:
 
 ```
-anzer make card:
+anzer make container:
     background="white",
     padding="16px" {
     anzer make paragraph: text="Inside";
@@ -105,12 +109,12 @@ anzer make section {
 
 ```
 <anzer start>
-anzer make card style 1:
+anzer make container style 1:
     background="white",
     padding="16px",
     shadow="soft";
 
-anzer make card use style="card style 1" {
+anzer make container use style="container style 1" {
     anzer make title: type="H2", text="News";
     anzer make paragraph: text="Summary of the news.";
     anzer make link: url="/story", text="Read story";
@@ -124,11 +128,11 @@ anzer make card use style="card style 1" {
 
 ```
 <anzer start>
-anzer make card:
+anzer make container:
     background="#ffffff",
     border="1px solid #dddddd",
     padding="20px" {
-    anzer make title: type="H2", text="One-off card";
+    anzer make title: type="H2", text="One-off container";
     anzer make paragraph: text="No separate style definition needed.";
 }
 <anzer end>
@@ -239,7 +243,7 @@ anzer make page {
     anzer make main {
         anzer make section {
             anzer make title: type="H2", text="Section";
-            anzer make card {
+            anzer make container {
                 anzer make paragraph: text="Card body";
             }
         }
@@ -261,7 +265,7 @@ These should be rejected with useful line/column diagnostics:
 ### Missing closing brace
 ```
 <anzer start>
-anzer make card {
+anzer make container {
     anzer make paragraph: text="Unclosed";
 <anzer end>
 ```
@@ -307,7 +311,7 @@ anzer embed link="https://example.com/article";
 - `tweet`: render an embedded social post using an approved/provider-supported method, or show a fallback link.
 - `drop`: render a Journoist Drop embed only if Journoist provides a supported embed contract.
 - `video`: detect supported video providers and use the appropriate player/embed; unsupported URLs fall back to a link.
-- `link`: show a link-preview card (title, description, image, and destination), distinct from a normal hyperlink.
+- `link`: show a link-preview container (title, description, image, and destination), distinct from a normal hyperlink.
 
 **Tests:** provider detection, privacy/security, graceful fallback, and whether one generic embed command is understandable. “Support everything” means a simple syntax with an extensible provider layer—not a guarantee that every provider permits embedding. Arbitrary URL metadata fetching must be constrained to prevent SSRF and unsafe content.
 
@@ -320,7 +324,7 @@ anzer make paragraph:
 <anzer end>
 ```
 
-**Intended behavior under test:** render the phrase “the report” as an ordinary inline hyperlink within the paragraph, not as a standalone preview card or embed.
+**Intended behavior under test:** render the phrase “the report” as an ordinary inline hyperlink within the paragraph, not as a standalone preview container or embed.
 
 **Tests:** escaping and quote parsing, nested/inline token boundaries, link text, URL safety, and whether embedded property syntax inside a quoted text string is too parser-complex. Consider a simpler alternative if this inline syntax proves fragile.
 

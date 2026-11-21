@@ -1,9 +1,11 @@
 # Property Stress Test 1
 
-**Status:** Test draft — based on Property Rules Proposal 1  
+**Status:** Specification stress suite for accepted property value rules; compiler execution pending  
 **Scope:** Property parsing and value forms. Not a full semantic property catalog.
 
 ## Valid cases
+
+These cases test syntax and value forms, not the full native style catalog. Property aliases and canonical duplicate behavior are covered in the style property stress suite.
 
 ### P1. Basic string property
 

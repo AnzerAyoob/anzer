@@ -1,31 +1,31 @@
 # Anzer v0.1 Semantic Consistency Audit
 
-Status: **Audit completed — findings and resolutions proposed; v0.1 is not frozen**  
+Status: **Audit reconciled against the v0.1 decision freeze; accepted findings closed, image-alt remains open**  
 Scope: cross-document consistency of grammar, strings, properties, elements, styles, layout, embedding, and interactions.
 
 ## 1. Executive summary
 
-The core direction is coherent enough to proceed toward a compiler, but the specification set is not ready to freeze. The audit found legacy examples, mismatched element/property rules, unresolved security/semantic decisions, and gaps between accepted catalogs and stress tests. Some issues are documentation inconsistencies that can be corrected immediately; others require user decisions and must not be silently treated as accepted.
-
-No compiler implementation or executable specification tests were run during this audit.
+The audit findings have now been reconciled with the user-approved v0.1 decision freeze. Most previously proposed resolutions are accepted and recorded; image-alt policy remains the only explicitly open decision. Remaining work is documentation consistency, precision checks, and later compiler implementation/testing. No compiler implementation or executable specification tests were run.
 
 
-## 2. Document status map
+## 2. Document status map (reconciled)
+
+The decision freeze (`ANZER_V0_1_DECISION_FREEZE_1.md`) is authoritative where this audit or older proposals conflict. Accepted resolutions are not pending user approval.
 
 | Document | Current status | Audit result |
 |---|---|---|
 | Syntax audit | Review recommendations | Historical audit; superseded on some points by accepted grammar decisions |
-| Grammar resolution | Proposed / not frozen | Structural rules largely resolved; status should be reconciled with later accepted decisions |
+| Grammar resolution | Reconcile with freeze | Structural rules accepted; decision freeze is authoritative |
 | Core grammar stress test | Test draft | Valid structure coverage; some legacy element/property names remain |
-| Property rules | Proposed / not frozen | Core value forms largely accepted in prior decisions; document status and examples are stale |
+| Property rules | Updated | Friendly spelling normalization and aliases are accepted; freeze is authoritative |
 | Property stress test | Test draft | Mostly consistent with core rules; must not be mistaken for semantic property catalog tests |
 | String rules | Accepted v0.1 | Consistent with string stress suite |
 | String stress test | Test draft | Consistent with accepted string behavior |
-| Element catalog | Review/acceptance pending | Contains accepted directions and open semantics; has a contradiction in HTML-escape-hatch recommendation |
-| Element/property compatibility review | Proposed resolution pending acceptance | Useful allowlist, but contains a mismatch with the style catalog and some over-broad rows |
-| Style property catalog | Coherent review draft | Rewritten; remaining precision and compatibility issues listed below |
+| Element catalog | Reconcile with freeze | Accepted directions are recorded in freeze; image-alt policy remains open |
+| Element/property compatibility review | Accepted resolution recorded | Freeze governs; compatibility matrix must remain aligned |
+| Style property catalog | Reconcile with freeze | Catalog and stress suite require precision/alignment pass |
 | Style stress test | Specification test suite | 50 cases, but some test examples use stale or incompatible names/elements |
-| Layout catalog | Accepted v0.1 | Mostly consistent; layout property families and property-specific validation need more precise mapping |
+| Layout catalog | Accepted v0.1 | Freeze governs accepted semantics; precision pass remains |
 | Layout stress test | Test proposal | Good coverage, but no direct tests for section/container matrix or two-value gap semantics |
 
 
@@ -274,7 +274,12 @@ This duplicates A-03 and affects grammar/layout/style stress examples. `card` sh
 10. Global baseline CSS. Recommendation: explicitly accept/reject.
 11. Diagnostics/recovery contract. Recommendation: define before parser implementation.
 
-## 5. Corrections applied during this audit
+## 5. Reconciliation against accepted decisions
+
+The user accepted the audit's recommended v0.1 decisions except image-alt policy. The following findings are therefore resolved at decision level and should not be treated as open user questions: A-04 through A-17, A-19 through A-23. A-02 is superseded by the explicit accepted `text-size` alias; A-03/A-24 are resolved by using `container` rather than a native `card` element. A-18 remains open by explicit user choice. A-01 is historical and superseded by newer records.
+
+
+## 6. Corrections applied during this audit
 
 The following documentation-only reconciliations were applied after creating this audit:
 
@@ -285,15 +290,14 @@ The following documentation-only reconciliations were applied after creating thi
 Commits: `3f969aa118e9206b1bb254a5a57d65df1cb6755d`, `4ea05f35099fe4e7d1f301c537f043336b8f2440`, `186e4d9de3df691bd12469e04fc587c47f536877`, `e3ec90b1b8b09bef650c06dc368572fe34bc2554`.
 
 
-## 6. Proposed audit closure criteria
+## 7. Reconciliation checklist
 
-- [ ] Immediate documentation corrections applied.
-- [ ] User decisions resolved and recorded as accepted, not merely proposed.
+- [x] User decisions recorded in the freeze, except image-alt policy.
 - [ ] Catalogs reference one another consistently.
-- [ ] All stress-test examples use valid v0.1 element/property names.
-- [ ] Cross-document consistency checks are automated or documented as a manual checklist.
-- [ ] Executable tests are implemented once compiler exists; no specification suite is misrepresented as runtime-tested.
+- [ ] Stress-test examples use valid v0.1 names and current alias rules.
+- [ ] Cross-document consistency checks are documented.
+- [ ] Compiler tests are implemented later; specification suites are not runtime tests.
 
-## 7. Final verdict
+## 8. Final verdict
 
-Anzer v0.1 is **not ready to freeze**. The base syntax and strings are comparatively mature; the remaining blockers are semantic compatibility, security, accessibility, property grammar precision, and document reconciliation. The recommended next move is to apply the immediate documentation corrections, then resolve the user-decision list in a focused review. Do not begin compiler implementation until those decisions are frozen or explicitly deferred with a clear v0.1 boundary.
+The decision freeze is now the controlling v0.1 record. Do not reopen accepted decisions unless a concrete contradiction or implementation blocker is found. The remaining image-alt policy is deliberately unresolved. Next work is documentation reconciliation and a consolidated specification, not compiler implementation yet.

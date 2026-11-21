@@ -306,14 +306,11 @@ HTML is the v0.1 output. Anzer's long-term replacement goal requires an Anzer ru
 
 Anzer-first minimal CLI:
 
-- `anzer compile input.anzer` — compile to HTML; default output `input.html`.
+- `anzer compile input.anzer` — compile to one self-contained HTML file; default output `input.html`.
 - `anzer check input.anzer` — validate without writing.
-- `anzer render input.anzer` — render using the Anzer runtime; viewer behavior is specified separately.
 - optional `-o output.html`.
 
-The source `.anzer` is the primary authoring artifact. No intermediate document file is emitted.
-
-HTML is the v0.1 compile output; there is no separate export command in this initial CLI.
+The source `.anzer` is the primary authoring artifact. No intermediate document file is emitted. The v0.1 compiler does not provide a runtime/viewer command.
 
 Avoid watch mode, dev server, project scaffolding, package manager, or multi-file imports in v0.1.
 

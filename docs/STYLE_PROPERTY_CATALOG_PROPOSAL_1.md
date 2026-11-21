@@ -120,10 +120,10 @@ Applicability is validated semantically, after parsing.
 | Property family | Applicable elements |
 |---|---|
 | Color, background, typography, text alignment | title, paragraph, button, link, section, container; image only where explicitly allowed by image rules |
-| Dimensions, margin, padding, border, border-radius | Elements according to the element-specific allowlist; image supports width, height, margin, border, border-radius, and display only |
+| Dimensions, margin, padding, border, border-radius | Elements according to the element-specific allowlist; image supports width, height, margin, border, border-width, border-style, border-color, and border-radius only |
 | Layout properties | section, container only |
 
-The final element/property compatibility matrix must be reconciled with the element catalog before this proposal is frozen. Unknown properties and incompatible properties are compile errors.
+See the proposed [Element / Property Compatibility Review](ELEMENT_PROPERTY_COMPATIBILITY_REVIEW_1.md) for the explicit allowlist. Incompatible properties are compile errors. The compatibility review remains pending user acceptance.
 
 ## 6. Reusable styles and precedence
 
@@ -156,7 +156,7 @@ Rationale: consistent sizing, a clean page canvas, and images that do not overfl
 
 ## 9. Review checklist before freezing
 
-- [ ] Reconcile element/property applicability against the element catalog.
+- [ ] Review and accept the Element / Property Compatibility Review.
 - [ ] Confirm exact keyword grammar for max-width and max-height (including none).
 - [ ] Confirm border-width keyword acceptance and interaction with numeric units.
 - [ ] Verify border shorthand parsing, omitted-token defaults, and source-order-independent component overrides.

@@ -89,7 +89,7 @@ Expected: section > container > paragraph.
 anzer make section {}
 ```
 
-Expected: syntactically valid container with zero children. Semantics may warn.
+Expected: parse succeeds; container node has zero children; no diagnostic.
 
 ### A9. Sequential siblings
 
@@ -158,7 +158,7 @@ anzer make section;
     anzer make paragraph: text="Unexpected child";
 ```
 
-Expected: first statement is a leaf. The following paragraph is not its child. Depending on top-level/indent policy, the paragraph may parse as a separate statement or produce a diagnostic; never reinterpret the semicolon as a block opener.
+Expected: first declaration parses as a leaf; the following paragraph parses as a separate document-level statement; no implicit nesting.
 
 ### B3. Unmatched closing brace
 
@@ -194,7 +194,7 @@ anzer make image: src="photo.jpg" {
 }
 ```
 
-Expected: syntax can recognize a block, but semantic validation reports that image cannot contain children if image is designated void. This test is conditional on the element catalog defining image as void.
+Expected: semantic error `void-element-has-children`; no output file.
 
 ### B7. Container header terminated as leaf
 
@@ -202,7 +202,7 @@ Expected: syntax can recognize a block, but semantic validation reports that ima
 anzer make container: padding="16px";
 ```
 
-Expected: syntactically a leaf. It must not be guessed to be a container merely because card is commonly a container.
+Expected: syntactically a leaf. It must not be guessed to be a container merely because container is commonly a container.
 
 ## C. Compact/multiline equivalence pairs
 

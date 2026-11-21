@@ -1,5 +1,7 @@
 # Anzer Syntax Proposals
 
+A broader syntax stress-test document is available at [docs/SYNTAX_STRESS_TEST.md](../../docs/SYNTAX_STRESS_TEST.md). It contains 15 scenarios, including nesting, styles, forms, multilingual text, behavior, and invalid syntax.
+
 These examples are **design test cases only**. They are not guaranteed to compile and must not be treated as finalized syntax.
 
 They are used to test the command-oriented design against common webpage patterns:

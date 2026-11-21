@@ -34,7 +34,7 @@ class Parser:
             i = start + 1
             while i < len(self.source.text):
                 ch = self.source.text[i]
-                if ch == "\\\\":
+                if ch == "\\":
                     i += 2
                     continue
                 if ch == '"' :

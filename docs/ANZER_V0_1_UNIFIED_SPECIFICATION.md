@@ -390,9 +390,9 @@ This specification does not prescribe compiler architecture, CLI, packaging, sou
 - Image alt fallback: derive from filename when omitted (remove extension; replace hyphens and underscores with spaces).
 - Source input: `.anzer`.
 - Compiler language: Python for v0.1.
-- Primary compilation product: Anzer-native, versioned intermediate representation (internal normalized document model), not HTML.
+- Compiler internal model: a normalized document tree used only inside the compiler; no separate intermediate file format.
 - Default compile output: replace source extension with `.html`.
-- CLI: `anzer compile <input.anzer> [-o <output.html>]`, `anzer check <input.anzer>`, and runtime-facing `anzer render <input.anzer>` (viewer behavior specified separately).
+- CLI: `anzer compile <input.anzer> [-o <output.html>]` and `anzer check <input.anzer>`. A runtime/viewer command is deferred.
 - HTML is the v0.1 output. Anzer's long-term goal requires runtime/browser support to replace HTML.
 - Failed compilation must not create or overwrite output.
 

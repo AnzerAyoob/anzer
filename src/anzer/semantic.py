@@ -37,6 +37,8 @@ class SemanticValidator:
     def _validate_nodes(self, nodes, styles, parent_kind):
         for node in nodes:
             if isinstance(node, StyleDeclaration):
+                if parent_kind is not None:
+                    self._error("Style declarations must be at document scope", node.span, "SEMSTYLE005")
                 continue
             if isinstance(node, HtmlEmbedding):
                 if parent_kind not in CONTAINER_KINDS:

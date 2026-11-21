@@ -60,6 +60,30 @@ Anzer should avoid surprising styling defaults. Proposal: compiler-generated out
 - Strings must be escaped for CSS output.
 - Embedded HTML is a separate trusted escape hatch and is not governed by this native property catalog.
 
+## Decisions from review (accepted direction)
+
+- Border supports both combined shorthand (`border`) and separate `border-width`, `border-style`, and `border-color` properties.
+- Colors support standard CSS named colors and hex forms. RGB/RGBA support is also recommended if validation is implemented; the final accepted color grammar must be documented.
+- Font-family supports fallback lists.
+- CSS length units should be broadly supported, with property-specific validation. Friendly aliases should normalize to canonical CSS properties.
+- `width` and `height` support `auto`.
+- Support `min-width`, `max-width`, `min-height`, and `max-height`, plus friendly aliases such as `minimum-width` and `maximum-width`.
+- Short aliases such as `font` may map to canonical properties such as `font-family`.
+- `slide` as a marquee-direction shortcut is deferred; marquee behavior needs a separate feature design.
+
+## Recommended compiler-generated baseline CSS
+
+Generate only a small technical baseline, not a visual theme:
+
+
+```css
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; }
+img { max-width: 100%; height: auto; }
+```
+
+Rationale: border-box sizing makes declared dimensions more predictable; removing the body margin gives a consistent page canvas; responsive image constraints prevent images from overflowing narrow screens. Do not force global font, color, heading sizes, paragraph spacing, link appearance, or button design in v0.1. Preserve browser defaults for those visual choices unless authors style them. This baseline should be tested and documented because even small global CSS changes affect output.
+
 ## Open decisions
 
 1. Confirm initial property list and whether border should be decomposed into border-width, border-style, and border-color instead of one combined property.

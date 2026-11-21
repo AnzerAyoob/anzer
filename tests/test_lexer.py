@@ -11,7 +11,7 @@ class LexerTests(unittest.TestCase):
 
     def test_document_markers(self):
         tokens, errors = self.lex("<anzer start>\n<anzer end>")
-        self.assertEqual([t.value for t in tokens[:2],], ["start", "end"])
+        self.assertEqual([t.value for t in tokens[:2]], ["start", "end"])
         self.assertEqual(errors, [])
 
     def test_all_escapes(self):

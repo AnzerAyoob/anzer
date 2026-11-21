@@ -1,84 +1,128 @@
 # Element Catalog & Semantics Proposal 1
 
-Status: **Proposal — awaiting review**  
+Status: **Updated with user decisions — review/acceptance pending**  
 Scope: Anzer v0.1
 
 ## Goal
 
-Define a small, explicit set of elements that Anzer v0.1 can author. The catalog is intentionally limited. Supporting arbitrary HTML in v0.1 would expand the semantic surface, complicate validation, and weaken the promise of a consistent authoring language.
+Define a small, explicit set of elements that Anzer v0.1 can author. Supporting arbitrary HTML in v0.1 would expand the semantic surface, complicate validation, and weaken the language's consistency.
 
 ## Proposed catalog
 
 | Anzer element | Default HTML output | Kind | v0.1 purpose |
 |---|---|---|---|
-| title | h1 | leaf | Main page heading |
+| title | h1 | leaf | Main heading |
 | paragraph | p | leaf | Text content |
 | button | button | leaf | Basic interaction target |
 | link | a | leaf | Navigation to a URL |
 | image | img | void leaf | Display an image |
-| section | section | container | Group related content |
-| container | div | container | Generic grouping/layout wrapper |
+| section | section | container | Semantic grouping |
+| container | div | container | Generic structural/layout grouping |
 
-## Element kinds
+## Confirmed decisions
+
+- `title` defaults to H1. `type` may select H2 through H6.
+- Keep both `section` and `container`; they serve distinct semantic and structural purposes.
+- `type` overrides are restricted to a compatibility allowlist; arbitrary tag names are not permitted.
+- Image `alt` text is optional. When omitted, the compiler derives a fallback from the image filename: remove the extension, replace filename separators such as hyphens and underscores with spaces, and normalize it to readable text. This is a fallback only; filenames may not accurately describe the image.
+- Containers support both direct text and nested Anzer elements.
+
+## Element kinds and syntax
 
 - **Leaf** elements cannot contain child Anzer elements.
-- **Container** elements may contain nested Anzer elements.
-- **Void leaf** elements have no children and do not require content text.
+- **Container** elements may contain nested Anzer elements and direct text.
+- **Void leaf** elements have no children and do not require text content.
 
-The parser determines leaf/container shape from syntax (semicolon versus opening brace) rather than guessing from the element name. Semantic validation then rejects a mismatch (for example, opening a block for image).
+Syntax determines shape: semicolon terminates a leaf; an opening brace starts a container. Semantic validation rejects shape mismatches (e.g. an image written as a container).
 
-## Default semantics and type overrides
 
-Default output mapping is the catalog table above. A type override may select a compatible HTML tag, subject to a validation allowlist and element-specific constraints.
+## Type override compatibility (allowlist proposal)
 
-Proposal: allow type overrides only for title, paragraph, container, and section in v0.1. For title, allow heading levels H1 through H6; for paragraph, allow a limited text-flow set such as P, SPAN, and DIV; for container and section, allow DIV and SECTION. The exact compatibility matrix needs approval before implementation.
+Proposed v0.1 compatibility:
 
-Do not permit arbitrary tag names, custom elements, script tags, or event-handler attributes through type.
+| Element | Allowed type values |
+|---|---|
+| title | H1, H2, H3, H4, H5, H6 |
+| paragraph | P, SPAN, DIV |
+| section | SECTION, DIV |
+| container | DIV, SECTION |
+| button, link, image | No type override in v0.1 |
 
-## Proposed property expectations (semantic layer; property syntax is already accepted)
+Tag values are case-insensitive at input and normalized internally. Output tags are lowercase. No arbitrary tags, custom elements, script tags, or event-handler attributes.
 
-This is not a complete property catalog. It identifies likely required/optional properties for each element and leaves exact styling-property validation to a later proposal.
+## Properties by element
 
-- title: text required; optional type, use style, and style properties.
-- paragraph: text required; optional type, use style, and style properties.
-- button: text required; optional use style, style properties, and a future interaction/action property.
-- link: text and url required; optional use style and style properties.
-- image: src required; optional alt, use style, and style properties. alt should be required by semantic/accessibility validation unless the author explicitly marks the image decorative (decorative syntax is not yet designed).
-- section: optional id, use style, and style properties; children allowed.
-- container: optional id, use style, and style properties; children allowed.
+- `title`: required `text`; optional `type`, `use style`, and style properties.
+- `paragraph`: required `text`; optional `type`, `use style`, and style properties.
+- `button`: required `text`; optional `action`, `target`, `use style`, and style properties.
+- `link`: required `text` and `url`; optional `use style` and style properties.
+- `image`: required `src`; optional `alt`, `use style`, and style properties.
+- `section`: optional `id`, `text`, `use style`, and style properties; nested elements allowed.
+- `container`: optional `id`, `text`, `use style`, and style properties; nested elements allowed.
+
+
+## Button interaction in v0.1
+
+To keep the language safe and predictable, Anzer does not accept user-written JavaScript or arbitrary event handlers. The initial button interaction is deliberately limited to toggling the visibility of a target container.
+
+
+| Property | Rule |
+|---|---|
+| `action` | Required for an interactive button; currently only `toggle` is supported |
+| `target` | Required with `toggle`; must be the `id` of a section or container |
+
+
+Example:
+
+```anzer
+<anzer start>
+
+anzer make button:
+    text="Show details",
+    action="toggle",
+    target="details";
+
+
+anzer make section { id="details"
+    text="Additional details are shown or hidden when the button is activated."
+}
+
+<anzer end>
+```
+
+Compiler behavior: generate a button that toggles the target's visibility. The target must resolve to a section/container ID. Missing IDs, duplicate IDs, unresolved targets, unsupported actions, or targets of the wrong element kind are semantic errors. Generated behavior must not evaluate user-provided code or inject text as HTML. Accessibility behavior (including synchronized `aria-expanded`/target state where appropriate) must be specified and tested before implementation.
+
+
+No arbitrary JavaScript, inline event handlers, alert actions, or multi-action sequences in v0.1. Links remain the navigation mechanism.
 
 ## Content model
 
-Proposal: v0.1 elements use a single text property for plain text content. Text is not HTML and is never interpreted as markup. Child Anzer elements are permitted only inside container elements. This avoids ambiguous mixed-content behavior in v0.1.
-
-
-Links use url; image uses src. These values are strings. URL safety and allowed schemes (for example, rejecting javascript:) must be specified in a security/semantic rules document.
+Element text is plain text and is never interpreted as HTML. Containers may have both a `text` property and nested elements; generated output must define a consistent ordering. Proposal: render a container's direct text before its child elements. This ordering must be tested and documented. Link URLs and image sources are strings; URL scheme safety (e.g. rejecting `javascript:`) belongs in a security validation specification.
 
 ## Semantic validation
 
-A compiler should report errors for:
+Report errors for:
 
 - unknown element names;
-- element used with the wrong syntactic form (leaf vs container);
+- leaf/container syntax mismatch;
 - required property missing;
-- wrong property value type;
+- incorrect property value type;
 - incompatible type override;
 - children inside leaf elements;
-- text property on a container if the no-mixed-content proposal is adopted;
-- unknown or unsupported semantic properties.
+- unknown or unsupported properties/actions;
+- duplicate IDs;
+- missing, unresolved, or invalid button targets;
+- invalid URLs or unsafe schemes.
 
 Do not silently drop invalid elements or properties.
 
-## Open decisions
+## Remaining open decisions
 
-1. Approve, remove, or rename catalog elements.
-2. Confirm title is always a main heading by default, or whether a separate heading element is preferable.
-3. Decide whether container is needed alongside section.
-4. Approve the limited type override matrix or defer type overrides in v0.1.
-5. Confirm whether image requires alt in v0.1 and how decorative images are represented.
-6. Confirm no mixed text/children in containers for v0.1.
-7. Define button interaction syntax separately; button should not be considered functional until a supported action is specified.
+1. Confirm container direct text ordering relative to nested children (proposal: direct text first).
+2. Confirm button toggle semantics and accessibility behavior after reviewing this proposal.
+3. Finalize URL validation and security rules.
+4. Finalize the exact HTML/CSS compatibility behavior and test cases.
 
 ## Recommendation
 
-Keep the catalog small and validate it strictly. Avoid an html escape hatch in v0.1: it would undermine the safety, portability, and semantic guarantees of the language. Add new elements only when a real authoring use case and test cases justify them.
+Keep the catalog small and strict. Do not add an arbitrary HTML escape hatch in v0.1. Add elements and interactions only when a concrete authoring use case and test suite justify them.

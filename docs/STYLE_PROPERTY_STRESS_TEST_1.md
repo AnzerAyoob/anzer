@@ -243,6 +243,164 @@ anzer make style "bad style":
 ```
 Expected: duplicate property error within the style declaration.
 
+
+## Additional edge cases
+
+### S31 — Decimal numeric length defaults to pixels
+```anzer
+anzer make container:
+    width=12.5,
+    padding=0.5;
+```
+Expected: valid; values normalize to `12.5px` and `0.5px`.
+
+### S32 — Friendly viewport unit names
+```anzer
+anzer make container:
+    width="50 viewport width",
+    height="75 viewport height";
+```
+Expected: valid; normalize to `50vw` and `75vh`.
+
+### S33 — Physical unit aliases
+```anzer
+anzer make container:
+    width="3 inches",
+    padding="4 millimeters",
+    margin="2 points";
+```
+Expected: valid; normalize to `3in`, `4mm`, and `2pt`.
+
+### S34 — Unit alias spacing
+```anzer
+anzer make container:
+    width="20 px";
+```
+Expected: valid; whitespace between number and unit is normalized.
+
+### S35 — Min/max dimension properties
+```anzer
+anzer make container:
+    min-width=200,
+    max-width="80 percent",
+    min-height=100,
+    max-height="500 pixels";
+```
+Expected: valid; values normalize to `200px`, `80%`, `100px`, and `500px`.
+
+### S36 — Border shorthand with omitted components
+```anzer
+anzer make container:
+    border="solid red";
+```
+Expected: valid if the border grammar allows omitted width and uses CSS-compatible defaults; otherwise this test must be rejected. The implementation must settle and document this shorthand grammar before coding.
+
+### S37 — Border component overrides regardless of order
+```anzer
+anzer make container:
+    border-width=3,
+    border="1px solid black";
+```
+Expected: valid; individual `border-width` remains `3px` after shorthand expansion, independent of order.
+
+### S38 — Border-style allowed values
+```anzer
+anzer make container:
+    border-style="dashed";
+```
+Expected: valid.
+
+### S39 — Invalid border style
+```anzer
+anzer make container:
+    border-style="sparkle";
+```
+Expected: error; unsupported border style.
+
+### S40 — Duplicate canonical property
+```anzer
+anzer make container:
+    padding=10,
+    padding=20;
+```
+Expected: duplicate property error.
+
+### S41 — Duplicate aliases with case variation
+```anzer
+anzer make container:
+    padding="10 PIXELS",
+    padding="20px";
+```
+Expected: duplicate property error (property duplicate, not value duplicate).
+
+### S42 — Unsupported unitless nonzero ambiguity is not an error
+```anzer
+anzer make container:
+    width=20;
+```
+Expected: valid; normalize to `20px`.
+
+### S43 — Negative min/max dimension
+```anzer
+anzer make container:
+    min-width="-10px";
+```
+Expected: error; negative dimension constraint is invalid.
+
+### S44 — Auto margin
+```anzer
+anzer make container:
+    margin="auto";
+```
+Expected: valid.
+
+### S45 — Auto padding is invalid
+```anzer
+anzer make container:
+    padding="auto";
+```
+Expected: error.
+
+### S46 — Reusable style alias override
+```anzer
+anzer make style "card style 1":
+    minimum-width=200;
+anzer make container:
+    use style="card style 1",
+    min-width=300;
+```
+Expected: valid; element's canonical property overrides the style's normalized property.
+
+### S47 — Alias duplicates inside style
+```anzer
+anzer make style "card style 1":
+    minimum-width=200,
+    min-width=300;
+```
+Expected: duplicate property error inside the style.
+
+### S48 — CSS value injection rejected
+```anzer
+anzer make container:
+    color="red; background-color: blue";
+```
+Expected: invalid color value; value must not inject another CSS declaration.
+
+### S49 — Unsupported CSS variable rejected
+```anzer
+anzer make container:
+    width="var(--width)";
+```
+Expected: unsupported expression error in v0.1.
+
+### S50 — Unsupported CSS calc rejected
+```anzer
+anzer make container:
+    width="calc(100% - 20px)";
+```
+Expected: unsupported expression error in v0.1.
+
+
 ## Notes
 
 - These are specification tests, not executable compiler tests.
@@ -250,3 +408,7 @@ Expected: duplicate property error within the style declaration.
 - Invalid cases must verify error category and source location.
 - Tests should also verify compact/multiline equivalence where relevant.
 - Do not silently widen the accepted property catalog while implementing tests.
+
+## Completion
+
+The specification stress test now covers 50 cases, including core accepted behaviors and edge cases. This is considered complete as a design/specification test suite. It is not executable and does not claim compiler runtime validation; execution becomes possible after parser/compiler implementation.

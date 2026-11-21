@@ -27,6 +27,22 @@ class Parser:
     def _span(self, a, b):
         return SourceSpan(self.source.location(a), self.source.location(b))
 
+    def _token_end_offset(self, token):
+        """Return the source offset immediately after a token, using its lexeme."""
+        start = token.location.offset
+        if token.kind == TokenKind.STRING:
+            i = start + 1
+            while i < len(self.source.text):
+                ch = self.source.text[i]
+                if ch == "\\\\":
+                    i += 2
+                    continue
+                if ch == '"' :
+                    return i + 1
+                i += 1
+            return len(self.source.text)
+        return start + len(token.value)
+
     def parse_document(self):
         markers=[t for t in self.tokens if t.kind==TokenKind.MARKER]
         starts=[t for t in markers if t.value=="start"]
@@ -115,7 +131,7 @@ class Parser:
             elif value_tok.kind==TokenKind.NUMBER:
                 try: value=int(value) if "." not in value else float(value)
                 except ValueError: pass
-            props.append(PropertyAssignment(name,value,self._span(name_tok.location.offset,value_tok.location.offset+len(value_tok.value))))
+            props.append(PropertyAssignment(name,value,self._span(name_tok.location.offset,self._token_end_offset(value_tok))))
             if self._current().value==",": self._advance()
             elif self._current().value not in (";","{","}"):
                 self._error("Expected ',' between properties",self._current(),"PARPROP004")

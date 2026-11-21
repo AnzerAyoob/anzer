@@ -237,7 +237,7 @@ Expected: valid; element properties override style properties.
 
 ### S30 — Alias duplicate inside reusable style
 ```anzer
-anzer make container style 1:
+anzer make paragraph style 1:
     font="Arial",
     font-family="Roboto";
 ```
@@ -363,17 +363,17 @@ Expected: error.
 
 ### S46 — Reusable style alias override
 ```anzer
-anzer make container style 1:
+anzer make container style 2:
     minimum-width=200;
 anzer make container:
-    use style="container style 1",
+    use style="container style 2",
     min-width=300;
 ```
 Expected: valid; element's canonical property overrides the style's normalized property.
 
 ### S47 — Alias duplicates inside style
 ```anzer
-anzer make container style 1:
+anzer make container style 2:
     minimum-width=200,
     min-width=300;
 ```

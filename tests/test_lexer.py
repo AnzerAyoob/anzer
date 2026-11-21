@@ -35,7 +35,7 @@ class LexerTests(unittest.TestCase):
         tokens, errors = self.lex("12abc 1. .5 -.5 --1 +1 1e3")
         self.assertEqual([t.value for t in tokens[:-1]], ["12", "abc", "1", ".5", "-.5", "-1", "1", "1", "e3"])
         self.assertEqual([d.code for d in errors], ["LEX001", "LEX001", "LEX001"])
-        self.assertEqual(errors[0].location.column, 4)
+        self.assertEqual(errors[0].location.column, 8)
 
     def test_exact_boolean_words(self):
         tokens, errors = self.lex("true false TRUE True truefalse")

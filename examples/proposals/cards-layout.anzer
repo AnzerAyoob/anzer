@@ -1,0 +1,22 @@
+<anzer start>
+
+anzer make title:
+    text="Featured Stories";
+
+anzer make card style 1:
+    background="#ffffff",
+    border="1px solid #e5e7eb",
+    shadow="soft",
+    padding="16px";
+
+anzer make card:
+    use style="card style 1";
+
+anzer make title:
+    type="H2",
+    text="Story Headline";
+
+anzer make paragraph:
+    text="A short story summary.";
+
+anzer end

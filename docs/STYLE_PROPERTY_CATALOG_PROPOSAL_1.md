@@ -97,3 +97,30 @@ Rationale: border-box sizing makes declared dimensions more predictable; removin
 ## Recommendation
 
 Keep native style properties typed, limited, and element-aware. Avoid accepting arbitrary CSS strings in v0.1. Expand the catalog later based on actual authoring needs and tests.
+
+
+## Unit-system decisions (accepted, v0.1)
+
+- Bare numeric lengths default to CSS pixels (e.g. `width=20` becomes `20px`).
+- Unitless zero remains `0`.
+- Recognized CSS unit abbreviations and friendly full-name aliases are accepted and normalized to CSS units. Unit aliases are case-insensitive.
+- Unit aliases include: px/pixel/pixels; %/percent/percentage; em; rem; vw/viewport width; vh/viewport height; vmin/viewport minimum; vmax/viewport maximum; ch; ex; cm/centimetre(s)/centimeter(s); mm/millimetre(s)/millimeter(s); in/inch(es); pt/point(s); pc/pica(s).
+- Supported units are validated per property. Invalid combinations are errors.
+- Negative values are accepted only on properties that permit them (e.g. margin); they are rejected for properties such as padding, gap, border-width, and border-radius.
+- `auto` is accepted only for applicable properties.
+- Unknown units, malformed values, and unsupported expressions/functions are compile errors.
+- Length parsing remains intentionally simple: no math, CSS variables, or arbitrary CSS functions in v0.1.
+
+## Additional property decisions (accepted direction)
+
+- Colors: standard CSS named colors and hex only. Hex accepts `#RGB`, `#RGBA`, `#RRGGBB`, and `#RRGGBBAA`. RGB/RGBA/HSL functions are not included in v0.1.
+- Border shorthand and individual border properties are both supported. The shorthand establishes component values; explicit individual border components override them independent of source order.
+- Alias normalization occurs before duplicate detection. Alias plus canonical property in the same declaration is an error. Duplicate detection is per declaration layer; direct element properties can override reusable-style properties.
+- `display` supports basic and advanced layout modes, including grid. Exact value/property grammar is to be documented in a separate layout catalog.
+- `gap` is valid only with flex/grid layout modes. If `gap` is used without a compatible explicit display, compilation fails; Anzer does not infer a layout mode.
+- Reusable styles do not inherit from other styles or reference styles. One reusable style per element in v0.1. Aliases normalize before duplicate detection inside styles. Direct properties override reusable-style properties.
+- Baseline CSS recommended for v0.1: box-sizing border-box for all elements and pseudo-elements, body margin 0, and responsive img max-width 100%/height auto. This baseline is pending final acceptance as a compiler output policy.
+
+## Revised status
+
+This catalog remains a proposal. The decisions above reflect the accepted direction for v0.1, but the full property list, compatibility matrix, and stress tests must be completed before freezing the catalog.

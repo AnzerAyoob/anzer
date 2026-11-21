@@ -23,6 +23,12 @@ class ParserRecoveryAndSpanTests(unittest.TestCase):
         self.assertTrue(any(e.code == "PARSTYLE005" for e in errors))
         self.assertEqual([node.name for node in doc.declarations], ["paragraph", "button"])
 
+    def test_unclosed_container_preserves_style_reference(self):
+        _, doc, lex, errors = self.parse('anzer make section: use style="section style 2" { anzer make paragraph;')
+        self.assertEqual(lex, [])
+        self.assertTrue(any(e.code == "PARDECL005" for e in errors))
+        self.assertEqual(doc.declarations[0].style_reference, "section style 2")
+
     def test_element_span_covers_container_declaration(self):
         source, doc, lex, errors = self.parse('anzer make section { anzer make paragraph; }')
         self.assertEqual(lex, [])

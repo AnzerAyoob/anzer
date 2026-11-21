@@ -2,32 +2,65 @@ import unittest
 from anzer.source import Source
 from anzer.lexer import Lexer
 from anzer.tokens import TokenKind
+from anzer.diagnostics import DiagnosticCategory
+
 
 class LexerTests(unittest.TestCase):
     def lex(self, text):
-        return Lexer(Source(text)).tokenize()
+        return Lexer(Source(text, "test.anzer")).tokenize()
 
     def test_document_markers(self):
-        tokens, errors = self.lex("<anzer start><anzer end>")
+        tokens, errors = self.lex("<anzer start>\n<anzer end>")
         self.assertEqual([t.value for t in tokens[:2]], ["start", "end"])
         self.assertEqual(errors, [])
 
-    def test_string_escape_decoding(self):
-        tokens, errors = self.lex('"a\\nb"')
+    def test_all_escapes(self):
+        tokens, errors = self.lex(r'"quote: \" slash: \\ newline: \n cr: \r tab: \t"')
         self.assertEqual(tokens[0].kind, TokenKind.STRING)
-        self.assertEqual(tokens[0].value, "a\nb")
+        self.assertEqual(tokens[0].value, 'quote: " slash: \\ newline: \n cr: \r tab: \t')
         self.assertEqual(errors, [])
 
-    def test_boolean_and_punctuation(self):
-        tokens, errors = self.lex("true false : , = ; { }")
-        self.assertEqual(tokens[0].kind, TokenKind.BOOLEAN)
-        self.assertEqual([t.value for t in tokens[2:8]], [":", ",", "=", ";", "{", "}"])
+    def test_marker_text_inside_string_is_content(self):
+        tokens, errors = self.lex('"<anzer start>, <anzer end>"')
+        self.assertEqual(tokens[0].value, "<anzer start>, <anzer end>")
         self.assertEqual(errors, [])
 
-    def test_unknown_escape_reports_error(self):
+    def test_scalar_and_punctuation(self):
+        tokens, errors = self.lex("true false -12 3.5 .5 : , = ; { }")
+        self.assertEqual([t.kind for t in tokens[:5]], [TokenKind.BOOLEAN, TokenKind.BOOLEAN, TokenKind.NUMBER, TokenKind.NUMBER, TokenKind.NUMBER])
+        self.assertEqual([t.value for t in tokens[5:11]], [":", ",", "=", ";", "{", "}"])
+        self.assertEqual(errors, [])
+
+    def test_unknown_escape_diagnostic(self):
         _, errors = self.lex('"\\q"')
-        self.assertTrue(errors)
+        self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0].code, "LEX004")
+        self.assertEqual(errors[0].category, DiagnosticCategory.LEXICAL)
+        self.assertEqual((errors[0].location.line, errors[0].location.column), (1, 2))
+
+    def test_incomplete_escape_diagnostic(self):
+        _, errors = self.lex('"abc\\')
+        self.assertEqual(errors[0].code, "LEX003")
+
+    def test_unterminated_string_diagnostic(self):
+        _, errors = self.lex('"abc')
+        self.assertEqual(errors[0].code, "LEX005")
+        self.assertEqual((errors[0].location.line, errors[0].location.column), (1, 1))
+
+    def test_raw_newline_diagnostic(self):
+        _, errors = self.lex('"abc\ndef"')
+        self.assertEqual(errors[0].code, "LEX002")
+        self.assertEqual((errors[0].location.line, errors[0].location.column), (1, 5))
+
+    def test_unexpected_character_location(self):
+        _, errors = self.lex("abc\n  @")
+        self.assertEqual(errors[0].code, "LEX001")
+        self.assertEqual((errors[0].location.line, errors[0].location.column), (2, 3))
+
+    def test_source_location_crlf(self):
+        source = Source("one\r\ntwo\rthree")
+        self.assertEqual((source.location(6).line, source.location(6).column), (2, 2))
+        self.assertEqual((source.location(9).line, source.location(9).column), (3, 1))
 
 if __name__ == "__main__":
     unittest.main()

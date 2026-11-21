@@ -125,7 +125,9 @@ class SemanticValidator:
                 continue
             if prop.name in PROPERTY_KINDS and kind not in PROPERTY_KINDS[prop.name]:
                 self._error("Property '{}' is not allowed on '{}'".format(prop.name, kind), prop.span, 'SEMPROP001')
-            if prop.name in STYLE_PROPERTIES and prop.name not in ELEMENT_STYLE_ALLOWLIST[kind]:
+            if prop.name in LAYOUT_PROPERTIES and kind not in CONTAINER_KINDS:
+                self._error("Layout property '{}' is only allowed on section/container".format(prop.name), prop.span, 'SEMLOUT001')
+            elif prop.name in STYLE_PROPERTIES and prop.name not in ELEMENT_STYLE_ALLOWLIST[kind]:
                 self._error("Style property '{}' is not supported for '{}'".format(prop.name, kind), prop.span, 'SEMPROP002')
         display = next((str(p.value).lower() for p in properties if p.name == 'display'), None)
         flex = {'flex-direction','flex-wrap','justify-content','align-items','align-content'}

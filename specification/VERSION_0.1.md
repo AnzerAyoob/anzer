@@ -1,223 +1,193 @@
 # Anzer Language Specification — v0.1 (Design Draft)
 
 **Status:** Proposal — not frozen, not implemented  
-**Target:** Static/browser web pages  
+**Target:** Browser web pages  
 **Source extension:** `.anzer`
 
-This document proposes a small, testable language surface. It is deliberately limited to one-page web authoring. It does not define Anzer as a general-purpose language yet.
+This specification records the current design direction. Syntax is still provisional and must be tested against realistic examples before implementation.
 
 ## 1. Goals
 
-- One source file can describe page structure, visual styles, and basic interaction.
-- Syntax should be cohesive and readable, not HTML/CSS/JavaScript with renamed keywords.
-- Compile to ordinary HTML, CSS, and JavaScript.
-- Generated output must be inspectable and hostable on static hosting.
-- Keep v0.1 small enough to implement and test.
+- Make web authoring approachable through readable, command-oriented instructions.
+- Describe structure, semantics, appearance, and basic behavior in one source file.
+- Compile to standard HTML, CSS, and JavaScript for ordinary browsers and hosting.
+- Allow compact single-line and readable multiline instructions interchangeably.
+- Reduce repetition through reusable numbered style definitions.
+- Keep generated output safe, accessible, and deterministic.
 
-## 2. Non-goals
+## 2. Non-goals for the first compiler
 
 - Native browser support for `.anzer`.
 - Server-side programming, databases, networking APIs, or package management.
 - General-purpose loops, classes, modules, or user-defined functions.
-- A custom runtime for simple pages.
-- Guaranteed syntax compatibility beyond this draft.
+- Arbitrary raw HTML or JavaScript execution.
+- A custom runtime for simple static pages.
 
-## 3. Source file
+## 3. Document boundaries
 
-- UTF-8 text.
-- File extension: `.anzer`.
-- One top-level `page` declaration per file.
-- Whitespace and line breaks are not semantically significant except where required to separate tokens.
-- Blocks use braces `{}`.
-- Strings use double quotes. Escape sequences are proposed: `\\`, `\"`, `\\n`, `\\t`.
-- Comments: `// line comment` and `/* block comment */`.
+The current proposal uses explicit boundaries:
 
-## 4. Proposed page structure
+```
+<anzer start>
 
-```anzer
-page "My First Anzer Page" {
-    section {
-        heading "Hello, Anzer!"
-        text "Structure, style and behavior in one source."
+...Anzer instructions...
 
-        button "Click me" {
-            style {
-                background: "#2563eb"
-                color: "#ffffff"
-                padding: 12
-                radius: 8
-            }
-
-            on click {
-                alert("Hello from Anzer!")
-            }
-        }
-    }
-}
+<anzer end>
 ```
 
-This is a proposal. Element names, nesting, and property syntax may change after usability review.
+Both markers are required in this proposal. All instructions between them belong to the Anzer document. The compiler must support compact and multiline instruction formatting with equivalent meaning.
 
-## 5. Core constructs proposed for v0.1
+## 4. Command direction
 
-### 5.1 Page
+Anzer uses command-oriented declarations, currently proposed as:
 
-`page "Title" { ... }` declares the page and title. A page block contains content and optional global settings.
-
-### 5.2 Content elements
-
-Initial candidate elements:
-
-- `section { ... }`
-- `heading "text"`
-- `text "text"`
-- `paragraph "text"`
-- `button "label" { ... }`
-- `link "label" to "https://example.com"`
-- `image "path" alt "description"`
-
-The exact list is not finalized. Element nesting rules must be explicit.
-
-### 5.3 Styles
-
-Style declarations are allowed inside an element and apply to that element. Property names are CSS-like; values are Anzer literals.
-
-```anzer
-section {
-    style {
-        background: "#111827"
-        color: "#ffffff"
-        padding: 24
-        align: center
-    }
-}
+```
+anzer make title: text="My heading";
+anzer make paragraph: text="My paragraph";
 ```
 
-Initial value types:
-- quoted strings
-- numeric values (unitless)
-- booleans, if a property requires them
+The exact command grammar and punctuation are not finalized.
 
-The compiler must define unit handling. Draft rule: numbers are emitted as CSS numbers without units unless a property-specific rule or explicit unit string applies. Lengths can be written as quoted CSS strings such as `"20px"`, `"2rem"`, or `"10%"`.
+## 5. Element defaults and semantic types
 
-### 5.4 Global style selectors
+Elements have default semantic types to avoid unnecessary duplication. Proposed defaults include:
 
-A proposed global style block:
+| Element command | Default type | HTML output |
+|---|---|---|
+| title | H1 | `<h1>` |
+| paragraph | paragraph | `<p>` |
+| button | button | `<button>` |
+| link | link | `<a>` |
+| image | image | `<img>` |
 
-```anzer
-style {
-    selector ".card" {
-        background: "#ffffff"
-        radius: 12
-        padding: 20
-    }
-}
+A title defaults to H1 when no type is specified. Explicit type overrides are permitted where compatible, e.g. a title with `type="H2"`. Heading types H1–H6 are semantic HTML headings and also receive corresponding default visual presentation.
+
+The final element list and default mapping are not yet exhaustive.
+
+## 6. Reusable numbered styles
+
+Style definitions are independent of document element positions and can be referenced by name:
+
+```
+anzer make paragraph style 1:
+    font="Arial",
+    type="paragraph",
+    color="black",
+    text-size="10pt";
+
+anzer make paragraph style 2:
+    font="Noto Nastaliq",
+    type="paragraph",
+    color="black",
+    text-size="12pt";
 ```
 
-Global selectors are optional for the first implementation. If included, selector text is passed through to CSS after validation/escaping; it is not an expression.
+An element may apply a style:
 
-### 5.5 Behavior and events
-
-Event handlers are explicitly nested:
-
-```anzer
-button "Greet" {
-    on click {
-        alert("Hello!")
-    }
-}
+```
+anzer make paragraph:
+    use style="paragraph style 2",
+    text="Sample paragraph";
 ```
 
-Candidate v0.1 actions:
-- `alert("message")`
-- `console.log(...)`
+When a style defines the element type, the user does not need to repeat that type on the element. Style identifiers are reusable labels, not references to content positions.
 
-These are only candidate actions. The initial compiler should support a very small, safe set and must not execute Anzer source during compilation.
+## 7. Property precedence
 
-## 6. Literals and identifiers
+Proposed resolution order, from lowest to highest:
 
-Proposed literals:
-- string: `"text"`
-- integer/decimal: `12`, `3.5`
-- boolean: `true`, `false`
+1. Element defaults.
+2. Reusable style properties.
+3. Direct properties specified on the element.
 
-Identifiers are ASCII letters or underscore followed by letters, digits, or underscores. Unicode identifiers are deferred. This restriction does not apply to quoted text.
+Direct properties override style properties. A style supplies a default type and appearance for compatible elements.
 
-## 7. Parsing rules (draft)
+## 8. Style compatibility
 
-The compiler should parse source into an AST, not generate output directly from token matches.
+If a style's semantic type conflicts with the target element, the compiler must report a diagnostic rather than silently generate contradictory semantics. The precise warning/error policy remains to be decided.
 
-High-level grammar (illustrative EBNF):
+## 9. Single-line and multiline formatting
 
-```ebnf
-program      = page_decl ;
-page_decl    = "page" string block ;
-block        = "{" statement* "}" ;
-statement    = element | style_block ;
-element      = "section" block
-             | "heading" string
-             | "text" string
-             | "paragraph" string
-             | "button" string block
-             | "link" string "to" string
-             | "image" string "alt" string ;
-style_block  = "style" block ;
+Both formats are intended to be equivalent:
+
+```
+anzer make paragraph: use style="paragraph style 2", text="Hello";
 ```
 
-This grammar is incomplete: nested style and event blocks, property declarations, and expression rules must be formally specified before implementation.
+and
 
-## 8. Compilation model
+```
+anzer make paragraph:
+    use style="paragraph style 2",
+    text="Hello";
+```
 
-Conceptual pipeline:
+Whitespace and line breaks are formatting and should not change meaning, except where token separation is required.
 
-`Source → Lexer → Parser → AST → Validation → HTML/CSS/JS Generator → Files`
+## 10. Styling presets
+
+Anzer may provide named visual presets for properties such as shadows. Proposed shadow presets include `soft`, `hard`, `raised`, `3D`, and `glow`. Each preset must have defined rendering behavior rather than ambiguous interpretation. Users may customize supported parameters such as color, size, intensity, and position.
+
+## 11. Proposed example
+
+```
+<anzer start>
+
+anzer make paragraph style 1:
+    font="Arial",
+    type="paragraph",
+    color="black",
+    text-size="10pt";
+
+anzer make paragraph style 2:
+    font="Noto Nastaliq",
+    type="paragraph",
+    color="black",
+    text-size="12pt";
+
+anzer make title:
+    font="Times New Roman",
+    color="black",
+    shadow="3D",
+    shadow-position="bottom",
+    shadow-size="1px",
+    text="This is a sample title";
+
+anzer make paragraph:
+    use style="paragraph style 1",
+    text="This paragraph uses style 1.";
+
+anzer make paragraph:
+    use style="paragraph style 2",
+    text="This paragraph uses style 2.";
+
+<anzer end>
+```
+
+This example illustrates the direction only; it is not compilable syntax yet.
+
+## 12. Compilation model
+
+`Source → Lexer → Parser → AST → Validation → HTML/CSS/JS Generator → Output Files`
 
 Suggested outputs:
-
 - `dist/index.html`
 - `dist/assets/anzer.css`
-- `dist/assets/anzer.js`
+- `dist/assets/anzer.js` (only when needed)
 
-A page without interactive behavior should not require a JavaScript output file. Generated files should be deterministic for identical source and compiler version.
+## 13. Safety and diagnostics
 
-## 9. Diagnostics
+- Escape text and attributes correctly.
+- Validate and safely emit CSS values.
+- Do not execute source during compilation.
+- Arbitrary raw HTML and JavaScript are out of scope for the initial compiler.
+- Errors should include source file, line, column, and actionable explanation.
+- Reject malformed input rather than emitting broken partial output.
 
-Errors should include:
-- filename
-- line and column
-- clear explanation
-- optional suggestion
+## 14. Next design validation
 
-The compiler should stop on syntax errors rather than emit partially broken output.
+Before grammar freeze, test syntax against realistic page scenarios: a simple landing page, article/news page, multilingual content with styles, cards/sections, and a form or interaction. Identify ambiguities and revise the grammar based on those tests.
 
-## 10. Security and escaping
+## 15. Change policy
 
-- Text and attribute content must be HTML-escaped.
-- CSS strings must be escaped and validated before emission.
-- JavaScript strings must be safely encoded; do not concatenate raw source into generated JS.
-- Anzer must not execute code during compilation.
-- Arbitrary raw HTML and arbitrary JavaScript are out of scope for v0.1.
-- External URLs and event actions require explicit syntax.
-
-## 11. Minimum acceptance demo
-
-A v0.1 compiler is considered demonstrable when it compiles one `.anzer` file into a valid page with:
-- title and semantic structure
-- at least two style declarations
-- a button
-- one click event that produces a visible result
-- generated output that works in a modern browser on static hosting
-
-## 12. Decisions still open
-
-- Final names and grammar for elements.
-- Whether global selectors are in the first release.
-- CSS property mapping and unit rules.
-- Supported event/action list.
-- Accessibility defaults and semantic mapping.
-- CLI shape and output path.
-- Compiler implementation language.
-
-## 13. Change policy
-
-This draft is not a compatibility promise. Syntax changes are expected before the first implementation. Once a release is marked stable, changes should be documented in the changelog and specification version.
+This is a design draft, not a compatibility promise. Syntax changes are expected before implementation. Once a release is stable, changes must be documented and versioned.

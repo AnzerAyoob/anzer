@@ -1,9 +1,13 @@
 # Anzer Syntax Audit — Pre-Grammar Review
 
-**Status:** Review completed; recommendations, not a grammar freeze.
+**Status:** Historical pre-freeze audit; superseded by accepted v0.1 decisions in `ANZER_V0_1_DECISION_FREEZE_1.md`.
 **Scope:** Existing syntax proposals in `docs/SYNTAX.md`, `docs/SYNTAX_STRESS_TEST.md`, and `specification/VERSION_0.1.md`.
 
 This audit is intentionally critical. A syntax can look readable in an isolated example but become inconsistent or difficult to parse across the language.
+
+## Reconciliation notice
+
+This audit predates the accepted v0.1 decision freeze. Its recommendations and open questions must not be treated as current decisions where the freeze has resolved them. The freeze is authoritative. Image-alt policy remains open.
 
 ## Executive verdict
 

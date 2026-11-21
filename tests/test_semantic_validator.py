@@ -22,7 +22,7 @@ class SemanticValidatorTests(unittest.TestCase):
         self.assertEqual(errors, [])
 
     def test_required_properties_are_enforced(self):
-        errors = self.validate("anzer make link: text="bad";")
+        errors = self.validate('anzer make link: text="bad";')
         self.assertTrue(any(e.code == "SEMELEM004" for e in errors))
 
     def test_unsafe_link_scheme_is_rejected(self):

@@ -412,3 +412,30 @@ Expected: unsupported expression error in v0.1.
 ## Completion
 
 The specification stress test now covers 50 cases, including core accepted behaviors and edge cases. This is considered complete as a design/specification test suite. It is not executable and does not claim compiler runtime validation; execution becomes possible after parser/compiler implementation.
+
+
+## Friendly property spelling normalization
+
+### S51 — Space separator equivalent to hyphen
+```anzer
+anzer make paragraph: font style="italic";
+```
+Expected: valid; normalized to `font-style="italic"`.
+
+### S52 — Expanded minimum-width alias
+```anzer
+anzer make container: minimum width=300;
+```
+Expected: valid; normalized to `min-width: 300px`.
+
+### S53 — Canonical duplicate after space normalization
+```anzer
+anzer make paragraph: font-style="italic", font style="normal";
+```
+Expected: duplicate canonical property error.
+
+### S54 — Duplicate expanded alias and canonical property
+```anzer
+anzer make container: minimum width=300, min-width=200;
+```
+Expected: duplicate canonical property error.

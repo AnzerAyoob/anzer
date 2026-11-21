@@ -31,7 +31,9 @@ The user accepted the recommendations from the semantic consistency audit for v0
   Do not globally set fonts, colors, heading/paragraph spacing, link styles, or button styles.
 - Diagnostics must distinguish lexical, syntax, semantic, and validation errors; include source line and column; recover where safe; and prevent output generation when errors remain. No unsafe partial output is emitted in v0.1.
 
-## 3. Friendly property aliases
+## 3. Friendly property names
+
+Property spelling is normalized before semantic lookup: runs of spaces and hyphens are treated equivalently, so `font-style` and `font style` resolve to the same property. Defined friendly expanded names also resolve through an explicit alias table (for example, `minimum width` → `min-width`). Property names remain lowercase in v0.1; arbitrary synonyms are not accepted unless listed. Alias normalization happens before duplicate detection.
 
 Both `font-size` and `text-size` are valid spellings and have identical meaning. Normalize `text-size` to `font-size` internally before duplicate detection.
 
@@ -42,7 +44,7 @@ anzer make paragraph: text="Hello", text-size="18px";
 anzer make paragraph: text="Hello", font-size="18px";
 ```
 
-If both aliases are used in the same declaration, they count as a duplicate canonical property and produce an error.
+If multiple spellings of the same property are used in one declaration, they count as a duplicate canonical property and produce an error.
 
 This alias is a deliberate simplicity choice. It does not imply unrestricted aliasing for other properties.
 

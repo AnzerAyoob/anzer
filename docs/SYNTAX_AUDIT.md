@@ -128,3 +128,7 @@ Interpretation rule to test:
 ## Final assessment
 
 **Do not freeze the grammar yet.** The foundation is sound enough to continue, but current examples contain avoidable inconsistency. Resolve the seven core grammar questions above before implementation. Feature additions should pause until those are resolved.
+
+
+## Reconciliation note (November 2026)
+This document is a historical pre-grammar audit. Several recommendations listed as unresolved were later addressed by newer v0.1 design documents, including canonical property placement, semicolon leaf terminators and brace-delimited containers, strict property/value rules, string escaping, element definitions, and scoped trusted HTML embedding. Use GRAMMAR_RESOLUTION_1.md, accepted string rules, property rules, element catalog, and SEMANTIC_CONSISTENCY_AUDIT_1.md as newer design references. This historical audit is not the current checklist. Its recommendation to defer all HTML embedding is superseded by the scoped HTML escape-hatch decision, which remains security-sensitive.

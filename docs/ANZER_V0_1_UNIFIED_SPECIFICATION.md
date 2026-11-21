@@ -385,9 +385,18 @@ This specification does not prescribe compiler architecture, CLI, packaging, sou
 - Native card element.
 - Additional actions beyond toggle.
 
-## 18. Open issue
+## 18. Final implementation decisions
 
-**Image-alt policy** is the sole explicitly retained open decision: whether filename-derived fallback should later be replaced or augmented. Current v0.1 behavior remains as documented in §7.4 unless user changes it.
+- Image alt fallback: derive from filename when omitted (remove extension; replace hyphens and underscores with spaces).
+- Compiler output: one self-contained HTML file, with CSS embedded and toggle runtime embedded only when needed.
+- Source input: `.anzer` extension.
+- CLI: `anzer compile <input.anzer> [-o <output.html>]` and `anzer check <input.anzer>`.
+- Default compile output: input basename with `.html` extension.
+- `check` validates only and does not write output.
+- Failed compilation must not create or overwrite output.
+- Implementation language: Python for v0.1.
+
+There are no remaining implementation-blocking decisions. These choices do not alter the frozen language syntax or semantics.
 
 ## 19. Supporting documents
 

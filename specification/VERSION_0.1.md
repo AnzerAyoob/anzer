@@ -4,7 +4,7 @@
 **Target:** Browser web pages  
 **Source extension:** `.anzer`
 
-This specification records the current design direction. Syntax is still provisional and must be tested against realistic examples before implementation.
+This specification records the current design direction for the initial compiler milestone. Syntax is still provisional and must be tested against realistic examples before implementation. It does not define Anzer's long-term ceiling: the project's broader vision is to replace HTML as the author-facing web language, while v0.1 compiles to HTML/CSS/JavaScript for compatibility with existing browsers.
 
 ## 1. Goals
 

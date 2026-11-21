@@ -43,6 +43,18 @@ class Parser:
             return len(self.source.text)
         return start + len(token.value)
 
+    def _canonical_property_name(self, raw_name):
+        normalized = "-".join(part for part in raw_name.replace("-", " ").split() if part)
+        aliases = {
+            "font": "font-family",
+            "text-size": "font-size",
+            "minimum-width": "min-width",
+            "maximum-width": "max-width",
+            "minimum-height": "min-height",
+            "maximum-height": "max-height",
+        }
+        return aliases.get(normalized, normalized)
+
     def parse_document(self):
         markers=[t for t in self.tokens if t.kind==TokenKind.MARKER]
         starts=[t for t in markers if t.value=="start"]
@@ -114,25 +126,48 @@ class Parser:
 
     def _parse_properties(self):
         props=[]
+        seen_names=set()
         while self._current().kind!=TokenKind.EOF and self._current().value not in (";","{","}"):
-            name_tok=self._current()
-            if name_tok.kind!=TokenKind.IDENTIFIER:
-                self._error("Expected property name",name_tok,"PARPROP001"); self._advance(); continue
-            name=self._advance().value
+            name_start=self._current()
+            if name_start.kind!=TokenKind.IDENTIFIER:
+                self._error("Expected property name",name_start,"PARPROP001")
+                self._advance()
+                continue
+
+            name_tokens=[self._advance()]
+            # Friendly multi-word property names are recognized by collecting
+            # identifier tokens up to the equals sign. Whitespace is lexical
+            # formatting, so both "minimum width" and "minimum-width" work.
+            while self._current().kind==TokenKind.IDENTIFIER and self._current().value!="=":
+                name_tokens.append(self._advance())
+            raw_name=" ".join(token.value for token in name_tokens)
+            name=self._canonical_property_name(raw_name)
             if self._current().value!="=":
-                self._error("Expected '=' after property name",self._current(),"PARPROP002"); self._recover_property(); continue
+                self._error("Expected '=' after property name",self._current(),"PARPROP002")
+                self._recover_property()
+                continue
             self._advance()
             value_tok=self._current()
             if value_tok.kind not in (TokenKind.STRING,TokenKind.NUMBER,TokenKind.BOOLEAN):
-                self._error("Expected scalar property value",value_tok,"PARPROP003"); self._recover_property(); continue
+                self._error("Expected scalar property value",value_tok,"PARPROP003")
+                self._recover_property()
+                continue
             self._advance()
             value=value_tok.value
-            if value_tok.kind==TokenKind.BOOLEAN: value=value=="true"
+            if value_tok.kind==TokenKind.BOOLEAN:
+                value=value=="true"
             elif value_tok.kind==TokenKind.NUMBER:
-                try: value=int(value) if "." not in value else float(value)
-                except ValueError: pass
-            props.append(PropertyAssignment(name,value,self._span(name_tok.location.offset,self._token_end_offset(value_tok))))
-            if self._current().value==",": self._advance()
+                try:
+                    value=int(value) if "." not in value else float(value)
+                except ValueError:
+                    pass
+            if name in seen_names:
+                self._error(f"Duplicate property '{name}' after normalization",name_start,"PARPROP005")
+            else:
+                seen_names.add(name)
+                props.append(PropertyAssignment(name,value,self._span(name_start.location.offset,self._token_end_offset(value_tok))))
+            if self._current().value==",":
+                self._advance()
             elif self._current().value not in (";","{","}"):
                 self._error("Expected ',' between properties",self._current(),"PARPROP004")
                 self._recover_property()

@@ -388,15 +388,15 @@ This specification does not prescribe compiler architecture, CLI, packaging, sou
 ## 18. Final implementation decisions
 
 - Image alt fallback: derive from filename when omitted (remove extension; replace hyphens and underscores with spaces).
-- Compiler output: one self-contained HTML file, with CSS embedded and toggle runtime embedded only when needed.
-- Source input: `.anzer` extension.
-- CLI: `anzer compile <input.anzer> [-o <output.html>]` and `anzer check <input.anzer>`.
-- Default compile output: input basename with `.html` extension.
-- `check` validates only and does not write output.
+- Source input: `.anzer`.
+- Compiler language: Python for v0.1.
+- Primary compilation product: Anzer-native, versioned intermediate representation (ANZIR), not HTML.
+- Default compile output: replace source extension with `.anzir`.
+- CLI: `anzer compile <input.anzer> [-o <output.anzir>]`, `anzer check <input.anzer>`, and runtime-facing `anzer render <input.anzer>` (viewer behavior specified separately).
+- HTML generation/export is optional compatibility functionality, never the default compile target or Anzer's identity.
 - Failed compilation must not create or overwrite output.
-- Implementation language: Python for v0.1.
 
-There are no remaining implementation-blocking decisions. These choices do not alter the frozen language syntax or semantics.
+The language specification remains unchanged by these product/architecture decisions.
 
 ## 19. Supporting documents
 

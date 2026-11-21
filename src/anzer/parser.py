@@ -100,6 +100,30 @@ class Parser:
             self._error("Expected element name",self._current(),"PARDECL003")
             self._recover_statement(); return None
         name=self._advance().value
+        # Style declarations use the element-kind-scoped form:
+        # "anzer make paragraph style 1: ...;"
+        if self._current().kind==TokenKind.IDENTIFIER and self._current().value=="style":
+            self._advance()
+            style_number=self._current()
+            if style_number.kind!=TokenKind.NUMBER or "." in style_number.value:
+                self._error("Expected integer style identifier",style_number,"PARSTYLE001")
+                self._recover_statement()
+                return None
+            self._advance()
+            if self._current().value!=":":
+                self._error("Expected ':' after style identifier",self._current(),"PARSTYLE002")
+                self._recover_statement()
+                return None
+            self._advance()
+            props=self._parse_properties()
+            if self._current().value!=";":
+                self._error("Expected ';' after style declaration",self._current(),"PARSTYLE003")
+                self._recover_statement()
+                return None
+            close=self._advance()
+            from .ast import StyleDeclaration
+            style_name=f"{name} style {style_number.value}"
+            return StyleDeclaration(style_name,name,tuple(props),self._span(begin.location.offset,close.location.offset+1))
         props=[]
         if self._current().value==":":
             self._advance()

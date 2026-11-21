@@ -22,4 +22,4 @@ class Diagnostic:
     def format(self, source_name: str = "<source>") -> str:
         if self.location is None:
             return f"{source_name}: {self.severity}: {self.message}"
-        return f"{source_name}:{self.location.line}:{self.location.column}: {self.severity}: {self.message"
+        return f"{source_name}:{self.location.line}:{self.location.column}: {self.severity}: {self.message}"

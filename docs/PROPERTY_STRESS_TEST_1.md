@@ -16,7 +16,7 @@ Expected: string value.
 ### P2. Multiple properties with required commas
 
 \`\`\`anzer
-anzer make paragraph: color="black", text-size="16px", text="Hello";
+anzer make paragraph: color="black", font-size="16px", text="Hello";
 \`\`\`
 
 Expected: three properties.

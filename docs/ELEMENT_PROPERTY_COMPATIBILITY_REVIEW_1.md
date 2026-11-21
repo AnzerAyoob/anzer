@@ -1,11 +1,11 @@
 # Element / Property Compatibility Review — v0.1
 
-Status: **Review result — proposed resolution, pending user acceptance**  
+Status: **Accepted v0.1 compatibility resolution; decision freeze is authoritative**  
 Scope: v0.1 element semantics and native style compatibility
 
 ## 1. Why this review exists
 
-The element catalog and style catalog previously described compatibility in broad terms, leaving contradictions and omissions. This review proposes a concrete allowlist so the compiler can reject incompatible properties deterministically rather than silently emitting questionable CSS. This is a specification exercise, not implementation or runtime testing.
+The element catalog and style catalog previously described compatibility in broad terms, leaving contradictions and omissions. This document records the accepted v0.1 compatibility allowlist so the compiler can reject incompatible properties deterministically. The decision freeze is authoritative if wording conflicts. This is specification only, not implementation/runtime testing.
 
 ## 2. v0.1 elements
 

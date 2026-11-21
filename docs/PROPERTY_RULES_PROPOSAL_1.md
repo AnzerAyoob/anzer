@@ -25,13 +25,20 @@ Compact and multiline forms parse identically. Missing commas are syntax errors;
 
 ## 3. Property names and friendly aliases
 
-Canonical property names are case-sensitive lowercase kebab-case. A name starts with a lowercase letter and uses lowercase letters, digits, and hyphens thereafter. The style reference `use style` is a special property phrase.
 
-Anzer v0.1 intentionally accepts this friendly alias:
+Canonical property names are lowercase kebab-case. For property lookup, Anzer treats spaces and hyphens equivalently: `font-style` and `font style` resolve to the same property. Runs of spaces normalize as one separator. The special phrase `use style` remains supported.
+
+
+Explicit friendly expanded aliases are also accepted, including:
 
 - `text-size` → `font-size`
+- `minimum width` → `min-width`
+- `maximum width` → `max-width`
+- `minimum height` → `min-height`
+- `maximum height` → `max-height`
 
-Both spellings are valid and have identical meaning. Normalize aliases before duplicate detection. Using both `text-size` and `font-size` in one declaration is a duplicate-property error.
+
+Aliases are normalized before duplicate detection. Arbitrary synonyms are not automatically accepted; only separator variants and aliases documented in the catalogs are supported. Property names remain lowercase in v0.1.
 
 ```anzer
 anzer make paragraph: text="Hello", text-size="18px";

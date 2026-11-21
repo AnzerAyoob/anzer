@@ -1,6 +1,6 @@
 # Style Property Catalog — v0.1
 
-Status: **Proposal — coherent review draft; not frozen**  
+Status: **v0.1 decisions recorded; catalog reconciliation and implementation validation remain**  
 Scope: Anzer v0.1 native style declarations
 
 ## 1. Purpose and boundary
@@ -12,7 +12,7 @@ Detailed layout grammar is defined in the accepted Layout Property Catalog (LAYO
 ## 2. Declaration rules
 
 - Property names are lowercase kebab-case; friendly aliases are accepted only when explicitly listed.
-- Alias normalization happens before duplicate detection.
+- Alias normalization happens before duplicate detection, including text-size → font-size.
 - An alias and its canonical property in the same declaration is a duplicate error.
 - Duplicate properties in one declaration layer are errors. The same canonical property in a reusable style and direct element declaration is allowed; the direct value wins.
 - Values are validated by property type. Unsupported syntax is a compile error, not emitted as raw CSS.
@@ -37,7 +37,7 @@ RGB/RGBA/HSL functions and arbitrary color strings are excluded from v0.1.
 |---|---|---|---|
 | font-family | string/list | font-family | Quoted family name or quoted fallback list |
 | font | alias | font-family | Alias; does not accept CSS font shorthand |
-| font-size | length | font-size | Supported length units; nonzero bare numbers resolve to px |
+| font-size | length | font-size | Supported length units; nonzero bare numbers resolve to px |\n| text-size | alias | font-size | Friendly alias for font-size; normalizes before duplicate detection |
 | font-weight | enum/number | font-weight | normal, bold, or 100–900 in increments of 100 |
 | text-align | enum | text-align | left, center, right, justify |
 
@@ -57,7 +57,7 @@ Font-family fallback lists are supported. The font alias is only a shortcut for 
 | padding | spacing | padding | One to four supported lengths; nonnegative; auto forbidden |
 | border-radius | length | border-radius | Supported units; nonnegative |
 
-Friendly dimension aliases: minimum-width → min-width, maximum-width → max-width, minimum-height → min-height, maximum-height → max-height. Aliases normalize before duplicate checks.
+Friendly dimension aliases: minimum-width → min-width, maximum-width → max-width, minimum-height → min-height, maximum-height → max-height. The friendly typography alias text-size → font-size is also accepted. Aliases normalize before duplicate checks.
 
 ### Borders
 

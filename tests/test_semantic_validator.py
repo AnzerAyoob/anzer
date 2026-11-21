@@ -71,6 +71,10 @@ class SemanticValidatorTests(unittest.TestCase):
         self.assertTrue(any(e.code=="SEMPROP005" for e in self.validate('anzer make paragraph: text="x", padding="auto";')))
     def test_border_style_enum(self):
         self.assertTrue(any(e.code=="SEMPROP005" for e in self.validate('anzer make paragraph: text="x", border-style="wavy";')))
+    def test_border_shorthand_accepts_components(self):
+        self.assertEqual(self.validate('anzer make paragraph: text="x", border="2px solid #abc";'),[])
+    def test_border_shorthand_rejects_duplicate_component(self):
+        self.assertTrue(any(e.code=="SEMPROP005" for e in self.validate('anzer make paragraph: text="x", border="2px solid dashed";')))
     def test_flex_enum_and_display_required(self):
         self.assertTrue(any(e.code=="SEMLOUT005" for e in self.validate('anzer make container: display="flex", flex-wrap="maybe" { }')))
     def test_grid_track_invalid_expression(self):

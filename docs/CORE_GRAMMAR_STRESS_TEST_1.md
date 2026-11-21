@@ -35,7 +35,7 @@ Expected: same structure as A1. This tests that indentation is not required and 
 ```anzer
 anzer make paragraph:
     color="black",
-    text-size="16px",
+    font-size="16px",
     text="Hello";
 ```
 
@@ -54,7 +54,7 @@ Expected: section with one paragraph child.
 ### A5. Container with properties
 
 ```anzer
-anzer make card:
+anzer make container:
     background="white",
     padding="16px" {
     anzer make paragraph: text="Inside";
@@ -66,7 +66,7 @@ Expected: card properties plus one child.
 ### A6. Compact container
 
 ```anzer
-anzer make card: background="white", padding="16px" { anzer make paragraph: text="Inside"; }
+anzer make container: background="white", padding="16px" { anzer make paragraph: text="Inside"; }
 ```
 
 Expected: same AST as A5.
@@ -75,7 +75,7 @@ Expected: same AST as A5.
 
 ```anzer
 anzer make section {
-    anzer make card {
+    anzer make container {
         anzer make paragraph: text="Deep";
     }
 }
@@ -116,7 +116,7 @@ Expected: section and paragraph as document-level siblings.
 ```anzer
 anzer make paragraph style 1:
     color="black",
-    text-size="16px";
+    font-size="16px";
 
 anzer make paragraph:
     use style="paragraph style 1",
@@ -128,7 +128,7 @@ Expected: style declaration followed by a leaf using that style.
 ### A12. Style override
 
 ```anzer
-anzer make paragraph style 1: color="black", text-size="16px";
+anzer make paragraph style 1: color="black", font-size="16px";
 
 anzer make paragraph:
     use style="paragraph style 1",
@@ -199,7 +199,7 @@ Expected: syntax can recognize a block, but semantic validation reports that ima
 ### B7. Container header terminated as leaf
 
 ```anzer
-anzer make card: padding="16px";
+anzer make container: padding="16px";
 ```
 
 Expected: syntactically a leaf. It must not be guessed to be a container merely because card is commonly a container.

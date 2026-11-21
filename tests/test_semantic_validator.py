@@ -45,6 +45,18 @@ class SemanticValidatorTests(unittest.TestCase):
         errors = self.validate('anzer make image: src="https://example.com/a.png", color="red";')
         self.assertTrue(any(e.code == "SEMPROP002" for e in errors))
 
+    def test_unknown_property_is_rejected(self):
+        errors = self.validate('anzer make paragraph: text="x", colour="red";')
+        self.assertTrue(any(e.code == "SEMPROP003" for e in errors))
+
+    def test_box_property_allowlist_applies_to_image(self):
+        errors = self.validate('anzer make image: src="https://example.com/a.png", padding=10;')
+        self.assertTrue(any(e.code == "SEMPROP002" for e in errors))
+
+    def test_container_accepts_native_style_and_layout_properties(self):
+        errors = self.validate('anzer make container: display="flex", gap=10, color="red" { }')
+        self.assertEqual(errors, [])
+
     def test_unknown_element_kind(self):
         errors = self.validate("anzer make banana;")
         self.assertTrue(any(e.code == "SEMELEM001" for e in errors))

@@ -5,7 +5,8 @@
 **Scope:** Source syntax, lexical rules, semantics, native elements, properties, layout, interactions, security, diagnostics, and output requirements.  
 **Not status:** This is not a compiler implementation and its test cases have not been executed by a compiler.
 
-## 1. Language goals
+> **Vision boundary:** Anzer's long-term ambition is to replace HTML as the author-facing web language. This v0.1 specification defines an initial compiler milestone that emits HTML, CSS, and JavaScript for compatibility with existing browsers. That target does not define Anzer's ultimate scope. An Anzer-native runtime or browser execution model is a future goal and is not specified or implemented here.
+
 
 Anzer is a simple, human-readable command-style authoring language. Authors should not need to memorize rigid technical spellings where a clearly equivalent friendly form can be accepted.
 

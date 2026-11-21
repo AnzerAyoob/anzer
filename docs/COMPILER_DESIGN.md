@@ -9,6 +9,6 @@ A minimal compiler pipeline is proposed:
 5. Generate HTML, CSS, and JavaScript.
 6. Write output files to a build directory.
 
-The initial implementation language is undecided, though Python is a practical candidate for a zero-budget prototype.
+Python is the approved implementation language for the v0.1 compiler.
 
 The compiler should be testable without requiring a browser. Generated output can then be checked with fixtures and browser smoke tests.

@@ -25,7 +25,7 @@ anzer make button: text="Click Me";
 ```
 
 Proposed default semantics:
-- `title` defaults to `H1` and emits an HTML `h1`.
+- `title` defaults to H1 and emits an `h1`.
 - `paragraph` defaults to paragraph semantics and emits `p`.
 - `button` defaults to button semantics and emits `button`.
 - `link` defaults to link semantics and emits `a`.
@@ -59,7 +59,7 @@ anzer make paragraph:
     text="This paragraph uses style 2.";
 ```
 
-If the style already defines the compatible element type, the element does not need to repeat it.
+If the style already defines the compatible element type, no need to repeat type.
 
 ## Inline properties
 
@@ -73,7 +73,7 @@ anzer make paragraph:
     text="This paragraph has inline properties.";
 ```
 
-Reusable styles and inline properties are both supported design goals. Inline properties are useful for one-off elements; reusable styles are useful when the same appearance or compatible semantic defaults should be applied repeatedly.
+Reusable styles and inline properties are both supported design goals. Inline properties are useful for one-off elements; reusable styles are useful when repeated.
 
 ## Property precedence
 
@@ -82,7 +82,7 @@ Resolve properties in this order, from lowest to highest priority:
 2. Reusable style properties.
 3. Direct properties on the element.
 
-Direct element properties override reusable style properties. A compatible semantic type supplied by a reusable style need not be repeated on the element.
+Direct element properties override reusable style properties.
 
 ## Style compatibility
 
@@ -100,13 +100,13 @@ anzer make section {
 ```
 
 - `{` opens a container body.
-- `}` closes the most recently opened container.
+- `}` closes the latest open container.
 - Containers may contain child elements and nested containers.
 - Empty containers are permitted.
-- Unmatched opening/closing braces must produce diagnostics.
+- Unmatched braces must produce diagnostics.
 - `<anzer end>` is invalid if any container remains open.
 
-A container can use a reusable style or inline properties. Exact placement of properties relative to the opening brace is still being refined.
+A container can use a reusable style or inline properties. Exact placement is still being refined.
 
 ## Single-line and multiline
 
@@ -128,7 +128,37 @@ They should compile identically. Line breaks are not intended to alter instructi
 
 ## Presets
 
-Possible built-in style values include shadow presets `soft`, `hard`, `raised`, `3D`, and `glow`. Each will have a standardized meaning and supported customization parameters.
+Possible built-in style values include shadows `soft`, `hard`, `raised`, `3D`, and `glow`. Each should have standardized meaning and supported customization parameters.
+
+## Embeds and link previews (exploration)
+
+The proposed `anzer embed` family aims to hide provider-specific markup behind simple commands:
+
+```
+anzer embed tweet="post-url";
+anzer embed drop="Journoist-Drop-url";
+anzer embed video="video-url";
+anzer embed link="webpage-url";
+```
+
+These are distinct intents:
+- `tweet`: social post embed.
+- `drop`: Journoist Drop embed (requires a supported platform embed contract).
+- `video`: detect a supported video provider and render its player.
+- `link`: rich preview card with title, description, preview image, and destination—not a plain inline hyperlink.
+
+This syntax is an idea under test, not a finalized feature or universal provider guarantee. Unsupported, blocked, or unavailable embeds should degrade to a safe clickable fallback. Provider scripts, consent/privacy, performance, and URL validation need defined policies. Metadata retrieval for link previews must be designed to prevent server-side request forgery (SSRF) and unsafe fetching.
+
+## Inline hyperlinks (exploration)
+
+An ordinary inline hyperlink is different from an embed or rich preview. Proposed text syntax:
+
+```
+anzer make paragraph:
+    text="Read {a-link="https://example.com/report", text="the report"} for details.";
+```
+
+This is experimental. Quoting/nesting and escaping may be difficult to parse safely. A simpler token or child-command syntax may be preferable if tests reveal ambiguity.
 
 ## Design principles
 
@@ -149,6 +179,9 @@ Possible built-in style values include shadow presets `soft`, `hard`, `raised`, 
 - Compatibility diagnostic severity.
 - Behavior/event syntax.
 - Responsive layout syntax.
-- Exact container syntax when style/properties are present.
+- Container property syntax.
+- Embed provider registry, fallback behavior, privacy, and URL validation.
+- Inline hyperlink grammar and escaping.
+- Compiler implementation language.
 
 Do not implement the parser until realistic examples have been reviewed and the grammar is sufficiently precise.

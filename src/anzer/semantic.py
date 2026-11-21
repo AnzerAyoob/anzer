@@ -56,6 +56,35 @@ class SemanticValidator:
         self.diagnostics.append(Diagnostic(DiagnosticCategory.SEMANTIC, message, span.start if span else None, code))
     def _props(self, node):
         return {p.name: p for p in node.properties}
+    def _resolve_properties(self, style_properties, element_properties, span):
+        """Merge style and element properties without mutating AST nodes.
+
+        Border shorthand expands into longhands. Direct element declarations
+        override style declarations; duplicates within a layer are diagnosed.
+        """
+        def layer(properties, label):
+            result={}
+            for prop in properties:
+                if prop.name in result:
+                    self._error(f"Duplicate property '{prop.name}' in {label}", prop.span, "SEMPROP006")
+                result[prop.name]=prop
+            expanded={}
+            for name, prop in result.items():
+                if name != "border":
+                    expanded[name]=prop
+                    continue
+                parts=str(prop.value).strip().lower().split()
+                for part in parts:
+                    if part in {"thin","medium","thick"} or _length(part):
+                        expanded["border-width"]=prop
+                    elif part in {"none","hidden","dotted","dashed","solid","double","groove","ridge","inset","outset"}:
+                        expanded["border-style"]=prop
+                    elif _color(part):
+                        expanded["border-color"]=prop
+            return expanded
+        merged=layer(style_properties, "style") if style_properties else {}
+        merged.update(layer(element_properties, "element"))
+        return merged
     def validate(self, document: Document):
         self.diagnostics=[]; self._ids={}; styles={}
         for declaration in document.declarations:
@@ -93,10 +122,13 @@ class SemanticValidator:
                 if ident in self._ids: self._error(f"Duplicate container id '{ident}'", props["id"].span, "SEMID001")
                 else: self._ids[ident]=node
             self._validate_properties(node.name,node.properties,node.span)
+            style_properties=()
             if node.style_reference:
                 style=styles.get(node.style_reference)
                 if style is None: self._error(f"Referenced style '{node.style_reference}' does not exist",node.span,"SEMSTYLE003")
                 elif style.target_kind != node.name: self._error(f"Style '{node.style_reference}' targets '{style.target_kind}', not '{node.name}'",node.span,"SEMSTYLE004")
+                else: style_properties=style.properties
+            self._resolve_properties(style_properties,node.properties,node.span)
             if node.name=="button":
                 action,target=props.get("action"),props.get("target")
                 if action and action.value!="toggle": self._error(f"Unsupported button action '{action.value}'",action.span,"SEMACT001")

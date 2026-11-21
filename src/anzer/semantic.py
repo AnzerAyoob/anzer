@@ -12,6 +12,11 @@ TYPE_ALLOWED = {"title": {"h1","h2","h3","h4","h5","h6"},
                 "container": {"div","section"}}
 
 
+
+STYLE_PROPERTIES = {'color','background-color','font-family','font-size','font-weight','text-align','width','height','min-width','min-height','max-width','max-height','margin','padding','border','border-width','border-style','border-color','border-radius'}
+IMAGE_STYLE_PROPERTIES = {'width','height','margin','border','border-width','border-style','border-color','border-radius'}
+LAYOUT_PROPERTIES = {'display','flex-direction','flex-wrap','justify-content','align-items','align-content','grid-template-columns','grid-template-rows','grid-auto-flow','grid-auto-columns','grid-auto-rows','justify-items','gap','row-gap','column-gap'}
+PROPERTY_KINDS = {'text':{'title','paragraph','button','link','section','container'},'type':{'title','paragraph','section','container'},'url':{'link'},'src':{'image'},'alt':{'image'},'action':{'button'},'target':{'button'},'id':{'section','container'}}
 class SemanticValidator:
     def __init__(self):
         self.diagnostics = []
@@ -45,6 +50,7 @@ class SemanticValidator:
             if isinstance(node, StyleDeclaration):
                 if parent_kind is not None:
                     self._error("Style declarations must be at document scope", node.span, "SEMSTYLE005")
+                self._validate_properties(node.target_kind, node.properties, node.span)
                 continue
             if isinstance(node, HtmlEmbedding):
                 if parent_kind not in CONTAINER_KINDS:
@@ -73,6 +79,7 @@ class SemanticValidator:
                     self._error(f"Duplicate container id '{ident}'", props["id"].span, "SEMID001")
                 else:
                     self._ids[ident] = node
+            self._validate_properties(node.name, node.properties, node.span)
             if node.style_reference:
                 style = styles.get(node.style_reference)
                 if style is None:
@@ -94,6 +101,28 @@ class SemanticValidator:
             if node.children is not None:
                 self._walk(node.children, styles, node.name)
 
+
+    def _validate_properties(self, kind, properties, span):
+        if kind not in ELEMENT_KINDS:
+            return
+        names = {p.name for p in properties}
+        for prop in properties:
+            if prop.name in PROPERTY_KINDS and kind not in PROPERTY_KINDS[prop.name]:
+                self._error("Property '{}' is not allowed on '{}'".format(prop.name, kind), prop.span, 'SEMPROP001')
+            if prop.name in STYLE_PROPERTIES and kind == 'image' and prop.name not in IMAGE_STYLE_PROPERTIES:
+                self._error("Style property '{}' is not supported for image".format(prop.name), prop.span, 'SEMPROP002')
+            if prop.name in LAYOUT_PROPERTIES and kind not in CONTAINER_KINDS:
+                self._error("Layout property '{}' is only allowed on section/container".format(prop.name), prop.span, 'SEMLOUT001')
+        display = next((str(p.value).lower() for p in properties if p.name == 'display'), None)
+        flex = {'flex-direction','flex-wrap','justify-content','align-items','align-content'}
+        grid = {'grid-template-columns','grid-template-rows','grid-auto-flow','grid-auto-columns','grid-auto-rows','justify-items'}
+        gaps = {'gap','row-gap','column-gap'}
+        if names & flex and display not in {'flex','inline-flex'}:
+            self._error('Flex properties require explicit flex display', span, 'SEMLOUT002')
+        if names & grid and display not in {'grid','inline-grid'}:
+            self._error('Grid properties require explicit grid display', span, 'SEMLOUT003')
+        if names & gaps and display not in {'flex','inline-flex','grid','inline-grid'}:
+            self._error('Gap requires explicit flex or grid display', span, 'SEMLOUT004')
     def _url(self, value, allowed, span, code):
         value = str(value).strip()
         parsed = urlparse(value)

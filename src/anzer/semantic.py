@@ -101,7 +101,7 @@ class SemanticValidator:
         for node in nodes:
             if isinstance(node, StyleDeclaration):
                 if parent_kind is not None: self._error("Style declarations must be at document scope", node.span, "SEMSTYLE005")
-                self._validate_properties(node.target_kind, node.properties, node.span); continue
+                self._validate_properties(node.target_kind, node.properties, node.span, check_layout=False); continue
             if isinstance(node, HtmlEmbedding):
                 if parent_kind not in CONTAINER_KINDS: self._error("Trusted HTML embedding is only allowed inside section or container", node.span, "SEMHTML001")
                 continue
@@ -121,14 +121,15 @@ class SemanticValidator:
                 ident=str(props["id"].value)
                 if ident in self._ids: self._error(f"Duplicate container id '{ident}'", props["id"].span, "SEMID001")
                 else: self._ids[ident]=node
-            self._validate_properties(node.name,node.properties,node.span)
+            self._validate_properties(node.name,node.properties,node.span,check_layout=False)
             style_properties=()
             if node.style_reference:
                 style=styles.get(node.style_reference)
                 if style is None: self._error(f"Referenced style '{node.style_reference}' does not exist",node.span,"SEMSTYLE003")
                 elif style.target_kind != node.name: self._error(f"Style '{node.style_reference}' targets '{style.target_kind}', not '{node.name}'",node.span,"SEMSTYLE004")
                 else: style_properties=style.properties
-            self._resolve_properties(style_properties,node.properties,node.span)
+            effective=self._resolve_properties(style_properties,node.properties,node.span)
+            self._validate_merged_layout(node.name,effective,node.span)
             if node.name=="button":
                 action,target=props.get("action"),props.get("target")
                 if action and action.value!="toggle": self._error(f"Unsupported button action '{action.value}'",action.span,"SEMACT001")
@@ -137,7 +138,7 @@ class SemanticValidator:
             if node.name=="link" and "url" in props: self._url(props["url"].value,{"http","https","mailto"},props["url"].span,"SEMURL001")
             if node.name=="image" and "src" in props: self._url(props["src"].value,{"http","https"},props["src"].span,"SEMURL002")
             if node.children is not None: self._walk(node.children,styles,node.name)
-    def _validate_properties(self, kind, properties, span):
+    def _validate_properties(self, kind, properties, span, check_layout=True):
         if kind not in ELEMENT_KINDS: return
         names={p.name for p in properties}
         for prop in properties:
@@ -156,7 +157,11 @@ class SemanticValidator:
                 if n=='id' and not isinstance(v,str): self._error("Property 'id' requires a string value",prop.span,'SEMPROP004')
                 continue
             self._validate_value(n,v,prop.span)
-        display=next((str(p.value).lower() for p in properties if p.name=='display'),None)
+        if check_layout:
+            self._validate_merged_layout(kind,{p.name:p for p in properties},span)
+    def _validate_merged_layout(self,kind,properties,span):
+        names=set(properties)
+        display=str(properties['display'].value).lower() if 'display' in properties else None
         flex={'flex-direction','flex-wrap','justify-content','align-items','align-content'}
         grid={'grid-template-columns','grid-template-rows','grid-auto-flow','grid-auto-columns','grid-auto-rows','justify-items'}
         gaps={'gap','row-gap','column-gap'}

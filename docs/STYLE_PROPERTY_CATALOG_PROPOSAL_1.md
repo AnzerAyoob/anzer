@@ -1,80 +1,143 @@
-# Style Property Catalog Proposal 1
+# Style Property Catalog — v0.1
 
-Status: **Proposal — awaiting review**  
-Scope: Anzer v0.1
+Status: **Proposal — coherent review draft; not frozen**  
+Scope: Anzer v0.1 native style declarations
 
-## Goal
+## 1. Purpose and boundary
 
-Provide a small, typed styling vocabulary that maps predictably to CSS. Anzer should not expose arbitrary CSS property/value pairs in its native styling syntax in v0.1.
+This catalog defines the native, typed style properties Anzer accepts in v0.1. It is deliberately not a general CSS parser. Each property has a known value grammar, normalized output, and element compatibility rules.
 
-## Proposed style properties
+Detailed layout grammar is defined in the accepted Layout Property Catalog (LAYOUT_PROPERTY_CATALOG_PROPOSAL_1.md). This document references that catalog rather than duplicating it.
 
-| Anzer property | Value type | CSS output | Proposed allowed values / notes |
+## 2. Declaration rules
+
+- Property names are lowercase kebab-case; friendly aliases are accepted only when explicitly listed.
+- Alias normalization happens before duplicate detection.
+- An alias and its canonical property in the same declaration is a duplicate error.
+- Duplicate properties in one declaration layer are errors. The same canonical property in a reusable style and direct element declaration is allowed; the direct value wins.
+- Values are validated by property type. Unsupported syntax is a compile error, not emitted as raw CSS.
+- Strings follow core string rules; arbitrary CSS fragments are not accepted.
+- No expressions, calculations, CSS variables, !important, or arbitrary CSS functions in native style declarations in v0.1.
+- Properties not listed here or in the accepted layout catalog are errors.
+
+## 3. Property catalog
+
+### Color and background
+
+| Property | Type | CSS output | Allowed values |
 |---|---|---|---|
-| color | color | color | Named colors, hex, rgb/rgba syntax deferred; proposal: named colors and hex only initially |
-| background-color | color | background-color | Same color rules as color |
-| font-family | string | font-family | Quoted family name; fallback lists deferred |
-| font-size | length | font-size | px, rem, em; numeric values without units rejected |
-| font-weight | enum or number | font-weight | normal, bold, 100–900 (step 100) |
+| color | color | color | CSS named colors; hex #RGB, #RGBA, #RRGGBB, #RRGGBBAA |
+| background-color | color | background-color | Same color grammar |
+
+RGB/RGBA/HSL functions and arbitrary color strings are excluded from v0.1.
+
+### Typography and text
+
+| Property | Type | CSS output | Allowed values / rules |
+|---|---|---|---|
+| font-family | string/list | font-family | Quoted family name or quoted fallback list |
+| font | alias | font-family | Alias; does not accept CSS font shorthand |
+| font-size | length | font-size | Supported length units; nonzero bare numbers resolve to px |
+| font-weight | enum/number | font-weight | normal, bold, or 100–900 in increments of 100 |
 | text-align | enum | text-align | left, center, right, justify |
-| width | length or percent | width | px, %, rem, em; auto allowed |
-| height | length or percent | height | px, %, rem, em; auto allowed |
-| margin | spacing | margin | px, %, rem, em; auto allowed; shorthand supported |
-| padding | spacing | padding | px, %, rem, em; shorthand supported |
-| border | restricted string | border | Proposal: width + style + color; avoid arbitrary CSS parsing if possible |
-| border-radius | length | border-radius | px, %, rem, em |
-| display | enum | display | block, inline, inline-block, flex, grid, none |
-| gap | length | gap | px, rem, em; used for flex/grid containers |
 
-## Value rules
+Font-family fallback lists are supported. The font alias is only a shortcut for font-family, not the CSS multi-component font shorthand.
 
-- Style properties use the accepted property syntax and value typing rules.
-- CSS-like values are not automatically treated as strings; property validation determines the allowed type.
-- Units are mandatory for length values except documented keywords (such as auto for width/height/margin).
-- Negative values are permitted only for properties where the semantic validator allows them (proposal: margin only; not padding, border radius, or gap).
-- Color values are validated; unsupported formats should be errors, not silently emitted.
-- No expressions, calculations, CSS variables, !important, or arbitrary functions in v0.1.
-- No direct shorthand expansion beyond explicitly supported properties.
+### Dimensions and spacing
 
-## Layout and property applicability
+| Property | Type | CSS output | Allowed values / rules |
+|---|---|---|---|
+| width | length/keyword | width | Supported units; auto |
+| height | length/keyword | height | Supported units; auto |
+| min-width | length | min-width | Supported units; nonnegative |
+| max-width | length/keyword | max-width | Supported units; none where allowed by validation |
+| min-height | length | min-height | Supported units; nonnegative |
+| max-height | length/keyword | max-height | Supported units; none where allowed by validation |
+| margin | spacing | margin | One to four supported lengths; auto where valid; negative values permitted |
+| padding | spacing | padding | One to four supported lengths; nonnegative; auto forbidden |
+| border-radius | length | border-radius | Supported units; nonnegative |
 
-Properties may be accepted on elements only when semantically applicable. Proposal:
+Friendly dimension aliases: minimum-width → min-width, maximum-width → max-width, minimum-height → min-height, maximum-height → max-height. Aliases normalize before duplicate checks.
 
-- Text properties: title, paragraph, button, link, section, container.
-- Box properties: all catalog elements, subject to element-specific restrictions; image may accept width, height, margin, border, border-radius, and display only.
-- Layout properties (display, gap): section and container only.
-- Unknown property or property used on an incompatible element is a semantic error.
+### Borders
 
-## Reusable styles
+| Property | Type | CSS output | Allowed values / rules |
+|---|---|---|---|
+| border | restricted shorthand | border (expanded internally) | Width, style, and color tokens in any order |
+| border-width | length/keyword | border-width | Supported nonnegative lengths or CSS border-width keywords |
+| border-style | enum | border-style | none, hidden, dotted, dashed, solid, double, groove, ridge, inset, outset |
+| border-color | color | border-color | Named colors and accepted hex forms |
 
-Reusable styles continue to use the existing style declaration mechanism and numbered names. Style declarations may contain style properties, and elements may use them through the accepted style reference syntax. Precedence remains: element defaults → reusable style → direct element properties. Duplicate property names in the same declaration are errors. Direct element properties override style values.
+Border shorthand components may be omitted. Omitted components use CSS-compatible defaults: width medium, style none, and color currentcolor. Duplicate shorthand components are errors. The shorthand establishes component values; explicitly supplied border-width, border-style, or border-color overrides the corresponding shorthand component regardless of source order. This precedence is resolved within one declaration layer.
 
-## Proposed default values
+### Layout
 
-Anzer should avoid surprising styling defaults. Proposal: compiler-generated output includes only the minimum reset/base styles required for predictable layout and accessibility. Element styling defaults should remain browser-compatible unless a later design specifies otherwise. This decision needs an explicit baseline CSS document.
+Layout properties are restricted to section and container elements. See the accepted Layout Property Catalog for complete grammar and compatibility rules.
 
-## Security and output
+- display accepts the values listed in the layout catalog.
+- Flex properties require display=flex or inline-flex.
+- Grid properties require display=grid or inline-grid.
+- gap, row-gap, and column-gap require explicit flex or grid display.
+- No layout mode is inferred.
 
-- Property names map only through the known catalog; no arbitrary CSS property injection.
-- Values are validated by type and range before CSS generation.
-- Strings must be escaped for CSS output.
-- Embedded HTML is a separate trusted escape hatch and is not governed by this native property catalog.
+## 4. Length and unit normalization
 
-## Decisions from review (accepted direction)
+Supported unit abbreviations and friendly aliases:
 
-- Border supports both combined shorthand (`border`) and separate `border-width`, `border-style`, and `border-color` properties.
-- Colors support standard CSS named colors and hex forms. RGB/RGBA support is also recommended if validation is implemented; the final accepted color grammar must be documented.
-- Font-family supports fallback lists.
-- CSS length units should be broadly supported, with property-specific validation. Friendly aliases should normalize to canonical CSS properties.
-- `width` and `height` support `auto`.
-- Support `min-width`, `max-width`, `min-height`, and `max-height`, plus friendly aliases such as `minimum-width` and `maximum-width`.
-- Short aliases such as `font` may map to canonical properties such as `font-family`.
-- `slide` as a marquee-direction shortcut is deferred; marquee behavior needs a separate feature design.
+| Canonical unit | Accepted examples |
+|---|---|
+| px | px, pixel, pixels |
+| % | %, percent, percentage |
+| em | em |
+| rem | rem |
+| vw | vw, viewport width |
+| vh | vh, viewport height |
+| vmin | vmin, viewport minimum |
+| vmax | vmax, viewport maximum |
+| ch | ch |
+| ex | ex |
+| cm | cm, centimetre(s), centimeter(s) |
+| mm | mm, millimetre(s), millimeter(s) |
+| in | in, inch(es) |
+| pt | pt, point(s) |
+| pc | pc, pica(s) |
 
-## Recommended compiler-generated baseline CSS
+Rules:
 
-Generate only a small technical baseline, not a visual theme:
+- Nonzero bare numeric lengths default to px (e.g. width=20 becomes 20px).
+- Unitless zero remains 0.
+- Unit aliases are case-insensitive and normalized to canonical CSS units.
+- Whitespace between a number and unit may be accepted and normalized.
+- Units are validated per property. Unsupported unit/property combinations are errors.
+- Negative values are property-specific: allowed for margin; rejected for padding, gap, border-width, and border-radius; other properties follow their explicit validation rule.
+- auto is property-specific and only accepted where listed.
+- Unknown units, malformed values, and unsupported expressions/functions are errors.
 
+## 5. Property applicability
+
+Applicability is validated semantically, after parsing.
+
+| Property family | Applicable elements |
+|---|---|
+| Color, background, typography, text alignment | title, paragraph, button, link, section, container; image only where explicitly allowed by image rules |
+| Dimensions, margin, padding, border, border-radius | Elements according to the element-specific allowlist; image supports width, height, margin, border, border-radius, and display only |
+| Layout properties | section, container only |
+
+The final element/property compatibility matrix must be reconciled with the element catalog before this proposal is frozen. Unknown properties and incompatible properties are compile errors.
+
+## 6. Reusable styles and precedence
+
+- An element may reference one reusable style in v0.1.
+- Reusable styles do not inherit from or reference other reusable styles.
+- Resolution order: element defaults → reusable style → direct element properties.
+- Direct element properties override reusable-style properties.
+- Duplicate properties within one declaration layer are errors.
+- Alias normalization happens before duplicate detection and resolution.
+- Border shorthand is expanded to components before component overrides are applied.
+
+## 7. Compiler-generated baseline CSS (pending decision)
+
+Recommended baseline:
 
 ```css
 *, *::before, *::after { box-sizing: border-box; }
@@ -82,45 +145,26 @@ body { margin: 0; }
 img { max-width: 100%; height: auto; }
 ```
 
-Rationale: border-box sizing makes declared dimensions more predictable; removing the body margin gives a consistent page canvas; responsive image constraints prevent images from overflowing narrow screens. Do not force global font, color, heading sizes, paragraph spacing, link appearance, or button design in v0.1. Preserve browser defaults for those visual choices unless authors style them. This baseline should be tested and documented because even small global CSS changes affect output.
+Rationale: consistent sizing, a clean page canvas, and images that do not overflow narrow screens. This baseline is NOT accepted yet. It changes browser behavior globally, so the user must explicitly approve it before implementation. Do not inject global font, color, heading spacing, paragraph spacing, link appearance, or button styling in v0.1.
 
-## Open decisions
+## 8. Security and output
 
-1. Confirm initial property list and whether border should be decomposed into border-width, border-style, and border-color instead of one combined property.
-2. Decide accepted color syntax (named colors and hex recommended; RGB(A) deferred).
-3. Decide whether font-family accepts one name or a fallback list.
-4. Finalize length units and whether unitless zero is permitted.
-5. Decide whether width/height support auto and whether min/max dimensions are needed in v0.1.
-6. Decide baseline/reset CSS behavior.
-7. Create stress tests for valid and invalid property/value combinations.
+- Native properties map only to catalogued CSS properties.
+- Validate values before generating output.
+- CSS output must serialize values safely; never concatenate untrusted text into raw CSS.
+- Embedded HTML is a separate trusted escape hatch and is not governed by this catalog. It can affect page content, styles, and scripts and must be clearly documented as trusted input.
 
-## Recommendation
+## 9. Review checklist before freezing
 
-Keep native style properties typed, limited, and element-aware. Avoid accepting arbitrary CSS strings in v0.1. Expand the catalog later based on actual authoring needs and tests.
+- [ ] Reconcile element/property applicability against the element catalog.
+- [ ] Confirm exact keyword grammar for max-width and max-height (including none).
+- [ ] Confirm border-width keyword acceptance and interaction with numeric units.
+- [ ] Verify border shorthand parsing, omitted-token defaults, and source-order-independent component overrides.
+- [ ] Verify font-family list parsing and font alias semantics.
+- [ ] Review baseline CSS and explicitly accept or reject it.
+- [ ] Cross-check all style stress tests (S1–S50) against this document.
+- [ ] Create an executable validator/compiler test suite before implementation claims.
 
+## 10. Status
 
-## Unit-system decisions (accepted, v0.1)
-
-- Bare numeric lengths default to CSS pixels (e.g. `width=20` becomes `20px`).
-- Unitless zero remains `0`.
-- Recognized CSS unit abbreviations and friendly full-name aliases are accepted and normalized to CSS units. Unit aliases are case-insensitive.
-- Unit aliases include: px/pixel/pixels; %/percent/percentage; em; rem; vw/viewport width; vh/viewport height; vmin/viewport minimum; vmax/viewport maximum; ch; ex; cm/centimetre(s)/centimeter(s); mm/millimetre(s)/millimeter(s); in/inch(es); pt/point(s); pc/pica(s).
-- Supported units are validated per property. Invalid combinations are errors.
-- Negative values are accepted only on properties that permit them (e.g. margin); they are rejected for properties such as padding, gap, border-width, and border-radius.
-- `auto` is accepted only for applicable properties.
-- Unknown units, malformed values, and unsupported expressions/functions are compile errors.
-- Length parsing remains intentionally simple: no math, CSS variables, or arbitrary CSS functions in v0.1.
-
-## Additional property decisions (accepted direction)
-
-- Colors: standard CSS named colors and hex only. Hex accepts `#RGB`, `#RGBA`, `#RRGGBB`, and `#RRGGBBAA`. RGB/RGBA/HSL functions are not included in v0.1.
-- Border shorthand and individual border properties are both supported. The shorthand establishes component values; explicit individual border components override them independent of source order.
-- Alias normalization occurs before duplicate detection. Alias plus canonical property in the same declaration is an error. Duplicate detection is per declaration layer; direct element properties can override reusable-style properties.
-- `display` supports basic and advanced layout modes, including grid. Exact value/property grammar is to be documented in a separate layout catalog.
-- `gap` is valid only with flex/grid layout modes. If `gap` is used without a compatible explicit display, compilation fails; Anzer does not infer a layout mode.
-- Reusable styles do not inherit from other styles or reference styles. One reusable style per element in v0.1. Aliases normalize before duplicate detection inside styles. Direct properties override reusable-style properties.
-- Baseline CSS recommended for v0.1: box-sizing border-box for all elements and pseudo-elements, body margin 0, and responsive img max-width 100%/height auto. This baseline is pending final acceptance as a compiler output policy.
-
-## Revised status
-
-This catalog remains a proposal. The decisions above reflect the accepted direction for v0.1, but the full property list, compatibility matrix, and stress tests must be completed before freezing the catalog.
+This rewrite removes contradictory earlier wording. Accepted v0.1 decisions are documented as rules; unresolved items remain explicitly open. The catalog is still a review draft and is not frozen.

@@ -1,27 +1,23 @@
-# String Rules Proposal 1
+# String Rules — v0.1
 
-**Status:** Proposed — not frozen  
-**Scope:** Lexical string handling only. This proposal does not define property types.
+**Status:** Accepted for v0.1  
+**Scope:** String delimiters and lexical handling. Property types remain a separate decision.
 
-## 1. String delimiter
+## 1. Quoting
 
-Use double quotes for string values:
+Double quotes are the only string delimiter in v0.1. Single-quoted strings are not supported.
 
 \`\`\`anzer
 anzer make paragraph: text="Hello, world!";
 \`\`\`
 
-Single-quoted strings are not supported in the proposed v0.1 syntax.
-
-## 2. Escapes
-
-Proposed escapes inside double-quoted strings:
+## 2. Accepted escape sequences
 
 | Escape | Meaning |
 |---|---|
 | \\" | Literal double quote |
 | \\\\ | Literal backslash |
-| \\n | Line-feed/new line in the resulting string |
+| \\n | Line-feed/new line in resulting string |
 | \\r | Carriage return |
 | \\t | Tab |
 
@@ -29,36 +25,28 @@ Example:
 
 \`\`\`anzer
 anzer make paragraph: text="She said \\"Hello\\".";
-\`\`\`
-
-Example resulting in a line break:
-
-\`\`\`anzer
 anzer make paragraph: text="First line\\nSecond line";
 \`\`\`
 
-Unknown escapes should produce a lexical error rather than be silently rewritten.
+Escape decoding must happen exactly once.
 
-## 3. Structural punctuation inside strings
+Unknown escape sequences produce a lexical error.
 
-Commas, semicolons, braces, colons, and angle brackets are ordinary characters inside strings. They must not terminate properties, statements, or containers.
+## 3. Punctuation inside strings
+
+Everything inside a valid quoted string is string content, not Anzer syntax. This includes commas, semicolons, braces, colons, angle brackets, and text resembling Anzer commands or document markers.
 
 \`\`\`anzer
 anzer make paragraph: text="Punctuation: commas,; braces {} and tags <anzer end> are text.";
 \`\`\`
 
-The lexer must identify the complete quoted string before structural parsing.
+The lexer must consume the entire string token before structural parsing.
 
-## 4. Source newlines vs string newlines
+## 4. Newlines
 
-Newlines may format source statements outside strings:
+Source statements may be formatted across physical lines. Raw physical newline characters inside quoted strings are not supported in v0.1.
 
-\`\`\`anzer
-anzer make paragraph:
-    text="This string is on one logical line.";
-\`\`\`
-
-Raw physical newlines inside quoted strings are not proposed for v0.1. Use the escaped sequence \`\\n\`:
+Use the escaped sequence \`\\n\` to produce a newline in the string value:
 
 \`\`\`anzer
 anzer make paragraph: text="Line one\\nLine two";
@@ -66,37 +54,44 @@ anzer make paragraph: text="Line one\\nLine two";
 
 ## 5. Unicode
 
-Accept and preserve Unicode text (subject to valid UTF-8 source), including Arabic, Urdu, Kashmiri, Sarazi, Bhaderwahi, Devanagari, and emoji.
+Unicode text must be accepted and preserved, including scripts and emoji. Authors should not need transliteration or escape encoding.
 
 \`\`\`anzer
 anzer make paragraph: text="السلام علیکم — नमस्ते — नमस्कार 😀";
 \`\`\`
 
-## 6. Invalid cases
+The source encoding policy is UTF-8. Invalid UTF-8 is an error.
 
-Proposed lexical errors:
+## 6. Invalid string cases
+
+These must produce lexical diagnostics:
 
 - Unterminated double-quoted string.
-- Trailing backslash at end of string.
-- Unknown escape (example: \`\\q\`).
-- Raw newline before the closing quote.
+- Trailing backslash / incomplete escape.
+- Unknown escape (e.g. \`\\q\`).
+- Raw physical newline inside a string.
 - Invalid UTF-8 source.
 
-## 7. Lexer requirements
+Errors should identify the location (line and column) where feasible. The compiler must not silently drop, replace, or reinterpret content.
 
-- A string is one token.
-- Structural punctuation inside a string is not structural.
-- Escape decoding occurs exactly once.
-- Diagnostics include line/column when practical.
-- No silent truncation, substitution, or reinterpretation.
+## 7. Deferred
 
-## 8. Deferred decisions
+Not part of v0.1:
 
-- Raw strings/triple quotes.
-- Interpolation.
-- Additional escapes.
-- UTF-8 BOM policy.
+- Single-quoted strings.
+- Raw strings or triple quotes.
+- String interpolation.
+- Additional escape sequences unless a concrete need is identified.
+- Raw multiline strings.
 
-## Recommendation
+## 8. Lexer requirements
 
-Keep v0.1 strings simple: double quotes, a small escape set, Unicode, and no raw multiline strings. Stress-test before acceptance.
+- A string is a single lexical token.
+- Structural punctuation is inert within strings.
+- Escape decoding occurs once.
+- String content is preserved faithfully.
+- Malformed strings cause diagnostics rather than parser guessing.
+
+## Decision
+
+String rules are accepted for v0.1. This acceptance does not freeze property syntax, value types, or the entire grammar.

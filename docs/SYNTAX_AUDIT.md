@@ -1,6 +1,10 @@
 # Anzer Syntax Audit — Pre-Grammar Review
 
+> **HISTORICAL DOCUMENT — NOT NORMATIVE.** This draft predates the v0.1 decision freeze. It is retained for design history only. Implementers must follow `docs/ANZER_V0_1_UNIFIED_SPECIFICATION.md`, `docs/ANZER_V0_1_DECISION_FREEZE_1.md`, and `docs/ANZER_V0_1_GRAMMAR_TEST_CHECKLIST.md`.
+
 **Status:** Historical pre-freeze audit; superseded by accepted v0.1 decisions in `ANZER_V0_1_DECISION_FREEZE_1.md`.
+> **HISTORICAL DOCUMENT — NOT NORMATIVE.** This draft predates the v0.1 decision freeze. It is retained for design history only. Implementers must follow `docs/ANZER_V0_1_UNIFIED_SPECIFICATION.md`, `docs/ANZER_V0_1_DECISION_FREEZE_1.md`, and `docs/ANZER_V0_1_GRAMMAR_TEST_CHECKLIST.md`.
+
 **Scope:** Existing syntax proposals in `docs/SYNTAX.md`, `docs/SYNTAX_STRESS_TEST.md`, and `specification/VERSION_0.1.md`.
 
 This audit is intentionally critical. A syntax can look readable in an isolated example but become inconsistent or difficult to parse across the language.

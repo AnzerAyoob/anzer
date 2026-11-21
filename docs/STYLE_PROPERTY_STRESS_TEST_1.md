@@ -293,7 +293,7 @@ Expected: valid; values normalize to `200px`, `80%`, `100px`, and `500px`.
 anzer make container:
     border="solid red";
 ```
-Expected: valid if the border grammar allows omitted width and uses CSS-compatible defaults; otherwise this test must be rejected. The implementation must settle and document this shorthand grammar before coding.
+Expected: valid. Omitted width/style/color components use CSS-compatible defaults (medium width, none style, currentcolor color). Tokens may appear in any order, with no duplicate component. This shorthand grammar is fixed for v0.1.
 
 ### S37 — Border component overrides regardless of order
 ```anzer

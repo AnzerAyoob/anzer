@@ -21,13 +21,14 @@ anzer make paragraph: text="Hello";
 
 Expected: one paragraph leaf.
 
-### A2. Compact leaf
+### A2. Leaf with token-separating line breaks
 
 ```anzer
-anzer make paragraph: text="Hello";
+anzer make paragraph:
+text="Hello";
 ```
 
-Expected: same structure as A1.
+Expected: same structure as A1. This tests that indentation is not required and a newline can separate tokens without changing statement shape.
 
 ### A3. Leaf with multiline properties
 

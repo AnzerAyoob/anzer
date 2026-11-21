@@ -73,6 +73,10 @@ class SemanticValidatorTests(unittest.TestCase):
         self.assertTrue(any(e.code=="SEMPROP005" for e in self.validate('anzer make paragraph: text="x", border-style="wavy";')))
     def test_border_shorthand_accepts_components(self):
         self.assertEqual(self.validate('anzer make paragraph: text="x", border="2px solid #abc";'),[])
+    def test_layout_properties_resolve_across_style_and_element(self):
+        self.assertEqual(self.validate('anzer make container style 1: display="flex"; anzer make container: use style="container style 1", gap=10 { }'),[])
+    def test_direct_display_override_invalidates_style_layout(self):
+        self.assertTrue(any(e.code=="SEMLOUT004" for e in self.validate('anzer make container style 1: display="flex"; anzer make container: use style="container style 1", display="block", gap=10 { }')))
     def test_duplicate_direct_property_is_rejected(self):
         self.assertTrue(any(e.code=="SEMPROP006" for e in self.validate('anzer make paragraph: text="x", color="red", color="blue";')))
     def test_duplicate_style_property_is_rejected(self):

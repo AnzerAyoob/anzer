@@ -1,13 +1,13 @@
 # Element Catalog & Semantics Proposal 1
 
-Status: **Updated with user decisions — review/acceptance pending**  
+Status: **Accepted v0.1 decisions recorded; decision freeze is authoritative**  
 Scope: Anzer v0.1
 
 ## Goal
 
 Define a small, explicit set of elements that Anzer v0.1 can author. Supporting arbitrary HTML in v0.1 would expand the semantic surface, complicate validation, and weaken the language's consistency.
 
-## Proposed catalog
+## v0.1 catalog
 
 | Anzer element | Default HTML output | Kind | v0.1 purpose |
 |---|---|---|---|
@@ -19,7 +19,7 @@ Define a small, explicit set of elements that Anzer v0.1 can author. Supporting 
 | section | section | container | Semantic grouping |
 | container | div | container | Generic structural/layout grouping |
 
-## Confirmed decisions
+## Accepted decisions
 
 - `title` defaults to H1. `type` may select H2 through H6.
 - Keep both `section` and `container`; they serve distinct semantic and structural purposes.

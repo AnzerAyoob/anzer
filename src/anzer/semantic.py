@@ -155,7 +155,22 @@ class SemanticValidator:
         elif n=='border-style' and s not in {'none','hidden','dotted','dashed','solid','double','groove','ridge','inset','outset'}: self._error("Invalid border-style",span,'SEMPROP005')
         elif n=='border':
             tokens=s.split()
-            if len(tokens)>3 or any(not (x in {'thin','medium','thick','none','hidden','dotted','dashed','solid','double','groove','ridge','inset','outset'} or _color(x) or _length(x)) for x in tokens): self._error("Invalid border shorthand",span,'SEMPROP005')
+            widths={'thin','medium','thick'}
+            styles={'none','hidden','dotted','dashed','solid','double','groove','ridge','inset','outset'}
+            seen=set()
+            valid=bool(tokens) and len(tokens)<=3
+            for token in tokens:
+                if token in widths or _length(token):
+                    category='width'
+                elif token in styles:
+                    category='style'
+                elif _color(token):
+                    category='color'
+                else:
+                    valid=False; continue
+                if category in seen: valid=False
+                seen.add(category)
+            if not valid: self._error("Invalid border shorthand or duplicate component",span,'SEMPROP005')
         elif n in LAYOUT_PROPERTIES: self._validate_layout_value(n,s,span)
     def _validate_layout_value(self,n,s,span):
         enums={

@@ -6,7 +6,7 @@ from anzer.parser import Parser
 
 class StyleReferenceParserTests(unittest.TestCase):
     def parse(self, body):
-        source = Source(f"<anzer start>\\n{body}\\n<anzer end>", "style-reference.anzer")
+        source = Source(f"<anzer start>\n{body}\n<anzer end>", "style-reference.anzer")
         tokens, lex_errors = Lexer(source).tokenize()
         document, parse_errors = Parser(source, tokens).parse_document()
         return document, lex_errors, parse_errors

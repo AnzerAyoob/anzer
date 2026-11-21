@@ -47,7 +47,7 @@ Decisions are recorded as the project develops. Revisit accepted decisions only 
 - **Status:** Accepted design direction.
 
 ## D-012: Style compatibility diagnostics
-- **Decision:** A style with a semantic type incompatible with the target element must not silently produce contradictory HTML semantics. The compiler should report a diagnostic; whether this is a warning or error is still open.
+- **Decision:** A style with a semantic type incompatible with the target element must not silently produce contradictory HTML semantics. The compiler should report a diagnostic; whether that is a warning or error is still open.
 - **Status:** Accepted principle; diagnostic severity open.
 
 ## D-013: Visual presets
@@ -59,5 +59,13 @@ Decisions are recorded as the project develops. Revisit accepted decisions only 
 - **Status:** Accepted design direction; exact grammar remains provisional.
 
 ## D-015: Flexible style definition
-- **Decision:** Support both reusable named/numbered style definitions and inline properties attached to an element. Reusable styles are applied with `use style`; inline properties avoid defining a separate style when reuse is unnecessary. Both workflows should coexist.
+- **Decision:** Support both reusable numbered/named style definitions and inline properties attached to an element. Reusable styles are applied with `use style`; inline properties avoid defining a separate style when reuse is unnecessary. Both workflows should coexist.
 - **Status:** Accepted design direction; exact syntax remains provisional.
+
+## D-016: Embeds and rich link previews
+- **Decision:** Explore a simple `anzer embed` command family for social posts, Journoist Drops, video embeds, and rich link-preview cards. The syntax should conceal provider-specific markup, with a provider adapter layer and graceful fallback to a clickable URL when embedding is unsupported or blocked.
+- **Status:** Accepted design direction for exploration; provider support, security, privacy, and syntax remain open.
+
+## D-017: Inline hyperlinks
+- **Decision:** Ordinary hyperlinks within text must be supported separately from embeds and rich link-preview cards. Inline link syntax is under exploration; quoted/nested syntax must be stress-tested for parsing and escaping.
+- **Status:** Accepted design direction; syntax open.

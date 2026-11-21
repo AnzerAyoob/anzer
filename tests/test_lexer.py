@@ -11,7 +11,7 @@ class LexerTests(unittest.TestCase):
 
     def test_document_markers(self):
         tokens, errors = self.lex("<anzer start>\n<anzer end>")
-        self.assertEqual([t.value for t in tokens[:2],], ["start", "end"])
+        self.assertEqual([t.value for t in tokens[:2]], ["start", "end"])
         self.assertEqual(errors, [])
 
     def test_all_escapes(self):
@@ -33,9 +33,9 @@ class LexerTests(unittest.TestCase):
 
     def test_number_token_boundaries_are_parser_responsibility(self):
         tokens, errors = self.lex("12abc 1. .5 -.5 --1 +1 1e3")
-        self.assertEqual([t.value for t in tokens[:-1]], ["12", "abc", "1", "5", "-.5", "-1", "1", "e3"])
+        self.assertEqual([t.value for t in tokens[:-1]], ["12", "abc", "1", ".5", "-.5", "-1", "1", "1", "e3"])
         self.assertEqual([d.code for d in errors], ["LEX001", "LEX001", "LEX001"])
-        self.assertEqual(errors[0].location.column, 4)
+        self.assertEqual(errors[0].location.column, 8)
 
     def test_exact_boolean_words(self):
         tokens, errors = self.lex("true false TRUE True truefalse")

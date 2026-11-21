@@ -57,32 +57,54 @@ class SemanticValidator:
     def _props(self, node):
         return {p.name: p for p in node.properties}
     def _resolve_properties(self, style_properties, element_properties, span):
-        """Merge style and element properties without mutating AST nodes.
+        """Merge style and direct properties with deterministic shorthand precedence.
 
-        Border shorthand expands into longhands. Direct element declarations
-        override style declarations; duplicates within a layer are diagnosed.
+        Border shorthand is expanded first within each layer; explicit
+        border-width/style/color declarations in that layer always win,
+        regardless of their source order. Direct element properties then
+        override the reusable style layer.
         """
+        border_parts = {"border-width", "border-style", "border-color"}
+        border_styles = {"none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"}
+        border_widths = {"thin", "medium", "thick"}
+
         def layer(properties, label):
-            result={}
+            result = {}
             for prop in properties:
                 if prop.name in result:
                     self._error(f"Duplicate property '{prop.name}' in {label}", prop.span, "SEMPROP006")
-                result[prop.name]=prop
-            expanded={}
+                result[prop.name] = prop
+
+            expanded = {}
+            shorthand = result.get("border")
+            if shorthand is not None:
+                tokens = str(shorthand.value).strip().lower().split()
+                width, style, color = "medium", "none", "currentcolor"
+                for token in tokens:
+                    if token in border_widths or _length(token):
+                        width = token
+                    elif token in border_styles:
+                        style = token
+                    elif _color(token):
+                        color = token
+                expanded["border-width"] = shorthand
+                expanded["border-style"] = shorthand
+                expanded["border-color"] = shorthand
+
             for name, prop in result.items():
-                if name != "border":
-                    expanded[name]=prop
+                if name == "border":
                     continue
-                parts=str(prop.value).strip().lower().split()
-                for part in parts:
-                    if part in {"thin","medium","thick"} or _length(part):
-                        expanded["border-width"]=prop
-                    elif part in {"none","hidden","dotted","dashed","solid","double","groove","ridge","inset","outset"}:
-                        expanded["border-style"]=prop
-                    elif _color(part):
-                        expanded["border-color"]=prop
+                expanded[name] = prop
+
+            # Explicit longhands win over shorthand independent of declaration order.
+            # Values are retained as original assignments; codegen/normalization
+            # can interpret shorthand component defaults consistently.
+            for name in border_parts:
+                if name in result:
+                    expanded[name] = result[name]
             return expanded
-        merged=layer(style_properties, "style") if style_properties else {}
+
+        merged = layer(style_properties, "style") if style_properties else {}
         merged.update(layer(element_properties, "element"))
         return merged
     def validate(self, document: Document):

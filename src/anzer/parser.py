@@ -1,5 +1,5 @@
 """Declaration parser for Anzer v0.1 (element declarations)."""
-from .ast import Document, SourceSpan, PropertyAssignment, ElementDeclaration
+from .ast import Document, SourceSpan, PropertyAssignment, ElementDeclaration, HtmlEmbedding
 from .diagnostics import Diagnostic, DiagnosticCategory
 from .source import Source
 from .tokens import TokenKind
@@ -92,6 +92,32 @@ class Parser:
             self._error("Expected 'anzer make' declaration",begin,"PARDECL001")
             self._recover_statement(); return None
         self._advance()
+        # Trusted raw HTML embedding: anzer use html="..."; (semantic scope
+        # validation is deliberately deferred to the semantic validator).
+        if self._current().kind==TokenKind.IDENTIFIER and self._current().value=="use":
+            self._advance()
+            if self._current().kind!=TokenKind.IDENTIFIER or self._current().value!="html":
+                self._error("Expected 'html' after 'anzer use'",self._current(),"PARHTML001")
+                self._recover_statement()
+                return None
+            self._advance()
+            if self._current().value!="=":
+                self._error("Expected '=' after 'html'",self._current(),"PARHTML002")
+                self._recover_statement()
+                return None
+            self._advance()
+            html_token=self._current()
+            if html_token.kind!=TokenKind.STRING:
+                self._error("Expected quoted HTML string",html_token,"PARHTML003")
+                self._recover_statement()
+                return None
+            self._advance()
+            if self._current().value!=";":
+                self._error("Expected ';' after HTML embedding",self._current(),"PARHTML004")
+                self._recover_statement()
+                return None
+            close=self._advance()
+            return HtmlEmbedding(html_token.value,self._span(begin.location.offset,close.location.offset+1))
         if self._current().kind!=TokenKind.IDENTIFIER or self._current().value!="make":
             self._error("Expected 'make' after 'anzer'",self._current(),"PARDECL002")
             self._recover_statement(); return None

@@ -13,10 +13,23 @@ TYPE_ALLOWED = {"title": {"h1","h2","h3","h4","h5","h6"},
 
 
 
-STYLE_PROPERTIES = {'color','background-color','font-family','font-size','font-weight','text-align','width','height','min-width','min-height','max-width','max-height','margin','padding','border','border-width','border-style','border-color','border-radius'}
+TEXT_PROPERTIES = {'color','background-color','font-family','font-size','font-weight','text-align'}
+BOX_PROPERTIES = {'width','height','min-width','min-height','max-width','max-height','margin','padding','border','border-width','border-style','border-color','border-radius'}
+STYLE_PROPERTIES = TEXT_PROPERTIES | BOX_PROPERTIES
 IMAGE_STYLE_PROPERTIES = {'width','height','margin','border','border-width','border-style','border-color','border-radius'}
 LAYOUT_PROPERTIES = {'display','flex-direction','flex-wrap','justify-content','align-items','align-content','grid-template-columns','grid-template-rows','grid-auto-flow','grid-auto-columns','grid-auto-rows','justify-items','gap','row-gap','column-gap'}
 PROPERTY_KINDS = {'text':{'title','paragraph','button','link','section','container'},'type':{'title','paragraph','section','container'},'url':{'link'},'src':{'image'},'alt':{'image'},'action':{'button'},'target':{'button'},'id':{'section','container'}}
+ELEMENT_STYLE_ALLOWLIST = {
+    'title': TEXT_PROPERTIES | BOX_PROPERTIES,
+    'paragraph': TEXT_PROPERTIES | BOX_PROPERTIES,
+    'button': TEXT_PROPERTIES | BOX_PROPERTIES,
+    'link': TEXT_PROPERTIES | BOX_PROPERTIES,
+    'image': IMAGE_STYLE_PROPERTIES,
+    'section': TEXT_PROPERTIES | BOX_PROPERTIES | LAYOUT_PROPERTIES,
+    'container': TEXT_PROPERTIES | BOX_PROPERTIES | LAYOUT_PROPERTIES,
+}
+NON_STYLE_PROPERTIES = {'text','type','url','src','alt','action','target','id'}
+KNOWN_PROPERTIES = set().union(*ELEMENT_STYLE_ALLOWLIST.values()) | NON_STYLE_PROPERTIES
 class SemanticValidator:
     def __init__(self):
         self.diagnostics = []
@@ -107,12 +120,13 @@ class SemanticValidator:
             return
         names = {p.name for p in properties}
         for prop in properties:
+            if prop.name not in KNOWN_PROPERTIES:
+                self._error("Unknown property '{}'".format(prop.name), prop.span, 'SEMPROP003')
+                continue
             if prop.name in PROPERTY_KINDS and kind not in PROPERTY_KINDS[prop.name]:
                 self._error("Property '{}' is not allowed on '{}'".format(prop.name, kind), prop.span, 'SEMPROP001')
-            if prop.name in STYLE_PROPERTIES and kind == 'image' and prop.name not in IMAGE_STYLE_PROPERTIES:
-                self._error("Style property '{}' is not supported for image".format(prop.name), prop.span, 'SEMPROP002')
-            if prop.name in LAYOUT_PROPERTIES and kind not in CONTAINER_KINDS:
-                self._error("Layout property '{}' is only allowed on section/container".format(prop.name), prop.span, 'SEMLOUT001')
+            if prop.name in STYLE_PROPERTIES and prop.name not in ELEMENT_STYLE_ALLOWLIST[kind]:
+                self._error("Style property '{}' is not supported for '{}'".format(prop.name, kind), prop.span, 'SEMPROP002')
         display = next((str(p.value).lower() for p in properties if p.name == 'display'), None)
         flex = {'flex-direction','flex-wrap','justify-content','align-items','align-content'}
         grid = {'grid-template-columns','grid-template-rows','grid-auto-flow','grid-auto-columns','grid-auto-rows','justify-items'}

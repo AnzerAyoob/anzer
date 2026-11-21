@@ -1,6 +1,6 @@
 # Anzer v0.1 Decision Freeze — Record 1
 
-Status: **User-approved decisions recorded; image-alt policy remains the sole open decision**
+Status: **User-approved v0.1 decisions recorded; implementation decisions finalized**
 Scope: v0.1 language simplicity, grammar, semantics, styles, layout, elements, security, and implementation boundaries.
 
 ## 1. Language philosophy
@@ -62,6 +62,6 @@ The user recognizes this is a pragmatic fallback and not guaranteed to be accura
 
 These decisions freeze the intended v0.1 behavior, not implementation quality. The compiler must still implement, test, and verify these rules. Stress tests are specifications until they are executed by an implementation. A decision freeze does not claim that Anzer v0.1 compiler exists or is ready.
 
-## 6. Supersession
+## 7. Supersession
 
 This document is the consolidated record of the user's v0.1 decisions. Older proposal and audit documents may retain historical statuses or recommendations; they should be reconciled to this record as a documentation cleanup task.

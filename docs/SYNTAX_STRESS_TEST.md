@@ -2,7 +2,7 @@
 
 **Status:** Experimental syntax exploration. None of these examples are compiler-ready or grammar-ratified.
 
-Purpose: test Anzer's command-oriented syntax against realistic web authoring patterns before implementation. These cases intentionally include syntax questions and should be reviewed for readability, consistency, ambiguity, and parser feasibility.
+Purpose: test Anzer's command-oriented syntax against realistic web authoring patterns before implementation. These cases intentionally include syntax questions and should be reviewed for readability, consistency, ambiguity, parser feasibility, safety, and fallback behavior.
 
 ## Proposed container property rule under test
 
@@ -290,6 +290,40 @@ anzer make paragraph style 1: color="red";
 
 **Tests:** compiler errors, warning policy, source locations, validation rather than silent output.
 
+## 16. Embeds and link previews
+
+These are proposed commands for testing a simple author experience with provider-aware rendering. The syntax is not finalized, and provider support is not guaranteed for every URL.
+
+```
+<anzer start>
+anzer embed tweet="https://social.example/post/123";
+anzer embed drop="https://journoist.example/drop/123";
+anzer embed video="https://video.example/watch/123";
+anzer embed link="https://example.com/article";
+<anzer end>
+```
+
+**Intended behavior under test:**
+- `tweet`: render an embedded social post using an approved/provider-supported method, or show a fallback link.
+- `drop`: render a Journoist Drop embed only if Journoist provides a supported embed contract.
+- `video`: detect supported video providers and use the appropriate player/embed; unsupported URLs fall back to a link.
+- `link`: show a link-preview card (title, description, image, and destination), distinct from a normal hyperlink.
+
+**Tests:** provider detection, privacy/security, graceful fallback, and whether one generic embed command is understandable. “Support everything” means a simple syntax with an extensible provider layer—not a guarantee that every provider permits embedding. Arbitrary URL metadata fetching must be constrained to prevent SSRF and unsafe content.
+
+## 17. Inline hyperlink inside text
+
+```
+<anzer start>
+anzer make paragraph:
+    text="Read {a-link="https://example.com/report", text="the report"} for details.";
+<anzer end>
+```
+
+**Intended behavior under test:** render the phrase “the report” as an ordinary inline hyperlink within the paragraph, not as a standalone preview card or embed.
+
+**Tests:** escaping and quote parsing, nested/inline token boundaries, link text, URL safety, and whether embedded property syntax inside a quoted text string is too parser-complex. Consider a simpler alternative if this inline syntax proves fragile.
+
 ---
 
 ## Review checklist
@@ -311,10 +345,10 @@ For each case, review:
 - Exact inline property syntax for containers.
 - How empty/void elements (image, input) terminate.
 - Whether `text`, `url`, and other content properties can be shorthand positional arguments.
-- Behavior/event model.
+- Behavior/event syntax.
 - Container names and their HTML mapping.
 - Whether styles are global or scoped.
 - Duplicate style handling.
 - Required accessibility attributes and diagnostic severity.
-
-Do not begin compiler implementation based on these test cases until the syntax is reviewed and the grammar is made coherent.
+- Embed provider registry, supported provider behavior, privacy/loading policy, and fallback design.
+- Inline hyperlink grammar and escaping within text.

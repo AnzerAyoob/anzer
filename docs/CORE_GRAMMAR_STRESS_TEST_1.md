@@ -1,6 +1,6 @@
 # Core Grammar Stress Test 1
 
-**Status:** Test draft — based on the accepted parser rule  
+**Status:** Specification stress suite; decisions are frozen, compiler execution pending  
 **Scope:** Statement endings and container parsing only. This does not freeze the full grammar.
 
 ## Accepted rule under test
@@ -61,7 +61,7 @@ anzer make container:
 }
 ```
 
-Expected: card properties plus one child.
+Expected: container properties plus one child.
 
 ### A6. Compact container
 
@@ -81,7 +81,7 @@ anzer make section {
 }
 ```
 
-Expected: section > card > paragraph.
+Expected: section > container > paragraph.
 
 ### A8. Empty container
 

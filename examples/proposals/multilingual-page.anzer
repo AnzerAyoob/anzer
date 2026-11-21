@@ -1,0 +1,26 @@
+<anzer start>
+
+anzer make paragraph style 1:
+    type="paragraph",
+    font="Arial",
+    text-size="16px",
+    color="black";
+
+anzer make paragraph style 2:
+    type="paragraph",
+    font="Noto Nastaliq",
+    text-size="18px",
+    color="black";
+
+anzer make title:
+    text="Multilingual Page";
+
+anzer make paragraph:
+    use style="paragraph style 1",
+    text="English text goes here.";
+
+anzer make paragraph:
+    use style="paragraph style 2",
+    text="Urdu text goes here.";
+
+<anzer end>

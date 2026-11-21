@@ -1,6 +1,6 @@
 # Style Property Stress Test 1
 
-Status: **Test proposal**
+Status: **Specification stress suite; compiler execution pending**
 Scope: Accepted Anzer v0.1 style and unit decisions
 Purpose: Verify property parsing, value validation, normalization, aliases, shorthand expansion, and conflict resolution before compiler implementation.
 

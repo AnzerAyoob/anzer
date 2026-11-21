@@ -33,6 +33,18 @@ class SemanticValidatorTests(unittest.TestCase):
         errors = self.validate('anzer make button: text="Toggle", action="toggle", target="missing";')
         self.assertTrue(any(e.code == "SEMACT004" for e in errors))
 
+    def test_layout_properties_require_flex_or_grid(self):
+        errors = self.validate('anzer make section: gap=10;')
+        self.assertTrue(any(e.code == "SEMLOUT004" for e in errors))
+
+    def test_layout_properties_are_container_only(self):
+        errors = self.validate('anzer make paragraph: text="x", gap=10;')
+        self.assertTrue(any(e.code == "SEMLOUT001" for e in errors))
+
+    def test_image_rejects_text_style_properties(self):
+        errors = self.validate('anzer make image: src="https://example.com/a.png", color="red";')
+        self.assertTrue(any(e.code == "SEMPROP002" for e in errors))
+
     def test_unknown_element_kind(self):
         errors = self.validate("anzer make banana;")
         self.assertTrue(any(e.code == "SEMELEM001" for e in errors))

@@ -10,12 +10,12 @@ class LexerTests(unittest.TestCase):
         return Lexer(Source(text, "test.anzer")).tokenize()
 
     def test_document_markers(self):
-        tokens, errors = self.lex("<anzer start>\\n<anzer end>")
+        tokens, errors = self.lex("<anzer start>\n<anzer end>")
         self.assertEqual([t.value for t in tokens[:2],], ["start", "end"])
         self.assertEqual(errors, [])
 
     def test_all_escapes(self):
-        tokens, errors = self.lex(r'"quote: \\" slash: \\\\ newline: \\n cr: \\r tab: \\t"')
+        tokens, errors = self.lex(r'"quote: \" slash: \\ newline: \n cr: \r tab: \t"')
         self.assertEqual(tokens[0].kind, TokenKind.STRING)
         self.assertEqual(tokens[0].value, 'quote: " slash: \\ newline: \n cr: \r tab: \t')
         self.assertEqual(errors, [])
@@ -71,17 +71,17 @@ class LexerTests(unittest.TestCase):
         self.assertEqual((errors[0].location.line, errors[0].location.column), (1, 1))
 
     def test_raw_newline_diagnostic(self):
-        _, errors = self.lex('"abc\\ndef"')
+        _, errors = self.lex('"abc\ndef"')
         self.assertEqual(errors[0].code, "LEX002")
         self.assertEqual((errors[0].location.line, errors[0].location.column), (1, 5))
 
     def test_unexpected_character_location(self):
-        _, errors = self.lex("abc\\n  @")
+        _, errors = self.lex("abc\n  @")
         self.assertEqual(errors[0].code, "LEX001")
         self.assertEqual((errors[0].location.line, errors[0].location.column), (2, 3))
 
     def test_source_location_crlf(self):
-        source = Source("one\\r\\ntwo\\rthree")
+        source = Source("one\r\ntwo\rthree")
         self.assertEqual((source.location(6).line, source.location(6).column), (2, 2))
         self.assertEqual((source.location(9).line, source.location(9).column), (3, 1))
 

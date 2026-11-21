@@ -51,7 +51,7 @@ anzer make paragraph style 2:
 
 Styles are reusable definitions. Their numbers do not refer to paragraph positions.
 
-## Applying a style
+## Applying a reusable style
 
 ```
 anzer make paragraph:
@@ -61,7 +61,52 @@ anzer make paragraph:
 
 If the style already defines the compatible element type, the element does not need to repeat it.
 
-Direct element properties override properties from the reusable style. Defaults are lowest priority, reusable style next, and direct properties highest.
+## Inline properties
+
+Authors may also define properties directly on an element without creating a separate reusable style:
+
+```
+anzer make paragraph:
+    font="Arial",
+    color="black",
+    text-size="10pt",
+    text="This paragraph has inline properties.";
+```
+
+Reusable styles and inline properties are both supported design goals. Inline properties are useful for one-off elements; reusable styles are useful when the same appearance or compatible semantic defaults should be applied repeatedly.
+
+## Property precedence
+
+Resolve properties in this order, from lowest to highest priority:
+1. Element defaults.
+2. Reusable style properties.
+3. Direct properties on the element.
+
+Direct element properties override reusable style properties. A compatible semantic type supplied by a reusable style need not be repeated on the element.
+
+## Style compatibility
+
+A style with a semantic type incompatible with its target element must not silently produce contradictory HTML semantics. The compiler should report a diagnostic; whether that is a warning or error remains open.
+
+## Containers and nesting (proposal accepted; grammar provisional)
+
+Brace-delimited blocks are the proposed way to define nested content:
+
+```
+anzer make section {
+    anzer make title: text="About Us";
+    anzer make paragraph: text="Our story...";
+}
+```
+
+- `{` opens a container body.
+- `}` closes the most recently opened container.
+- Containers may contain child elements and nested containers.
+- Empty containers are permitted.
+- Unmatched opening/closing braces must produce diagnostics.
+- `<anzer end>` is invalid if any container remains open.
+
+A container can use a reusable style or inline properties. Exact placement of properties relative to the opening brace is still being refined.
 
 ## Single-line and multiline
 
@@ -90,6 +135,7 @@ Possible built-in style values include shadow presets `soft`, `hard`, `raised`, 
 - No unnecessary duplication.
 - Semantic output, not merely visual imitation.
 - Styles reusable by name/number and independent of element positions.
+- Inline properties available for one-off styling.
 - Clear property precedence.
 - Compact or multiline formatting at the author's choice.
 - Helpful errors for incompatible styles and element types.
@@ -97,11 +143,12 @@ Possible built-in style values include shadow presets `soft`, `hard`, `raised`, 
 ## Still unresolved
 
 - Complete command grammar and delimiters.
-- Element catalog and nesting rules.
+- Element catalog and nesting rules in detail.
 - Property naming and accepted value types.
 - Style scope, uniqueness, and reference rules.
-- Compatibility diagnostics.
+- Compatibility diagnostic severity.
 - Behavior/event syntax.
 - Responsive layout syntax.
+- Exact container syntax when style/properties are present.
 
 Do not implement the parser until realistic examples have been reviewed and the grammar is sufficiently precise.

@@ -11,8 +11,8 @@ Detailed layout grammar is defined in the accepted Layout Property Catalog (LAYO
 
 ## 2. Declaration rules
 
-- Property names are lowercase kebab-case; friendly aliases are accepted only when explicitly listed.
-- Alias normalization happens before duplicate detection, including text-size → font-size.
+- Property names are lowercase; spaces and hyphens are interchangeable separators (e.g. `font-style` and `font style`). Friendly expanded aliases are accepted when listed.
+- Alias normalization happens before duplicate detection, including separator normalization and text-size → font-size.
 - An alias and its canonical property in the same declaration is a duplicate error.
 - Duplicate properties in one declaration layer are errors. The same canonical property in a reusable style and direct element declaration is allowed; the direct value wins.
 - Values are validated by property type. Unsupported syntax is a compile error, not emitted as raw CSS.

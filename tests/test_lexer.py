@@ -49,8 +49,8 @@ class LexerTests(unittest.TestCase):
 
     def test_partial_marker_is_not_marker(self):
         tokens, errors = self.lex("<anzer sta>")
-        self.assertEqual([t.kind for t in tokens], [TokenKind.EOF])
-        self.assertGreater(len(errors), 0)
+        self.assertEqual([t.kind for t in tokens[:-1]], [TokenKind.IDENTIFIER, TokenKind.IDENTIFIER])
+        self.assertEqual(len(errors), 2)
         self.assertTrue(all(d.code == "LEX001" for d in errors))
 
     def test_unknown_escape_diagnostic_and_recovery(self):

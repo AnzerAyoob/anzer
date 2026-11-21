@@ -1,6 +1,7 @@
 """Declaration parser for Anzer v0.1 (element declarations)."""
 from .ast import Document, SourceSpan, PropertyAssignment, ElementDeclaration, HtmlEmbedding
 from .diagnostics import Diagnostic, DiagnosticCategory
+from .property_names import canonical_property_name
 from .source import Source
 from .tokens import TokenKind
 
@@ -42,18 +43,6 @@ class Parser:
                 i += 1
             return len(self.source.text)
         return start + len(token.value)
-
-    def _canonical_property_name(self, raw_name):
-        normalized = "-".join(part for part in raw_name.replace("-", " ").split() if part)
-        aliases = {
-            "font": "font-family",
-            "text-size": "font-size",
-            "minimum-width": "min-width",
-            "maximum-width": "max-width",
-            "minimum-height": "min-height",
-            "maximum-height": "max-height",
-        }
-        return aliases.get(normalized, normalized)
 
     def parse_document(self):
         markers=[t for t in self.tokens if t.kind==TokenKind.MARKER]
@@ -195,7 +184,7 @@ class Parser:
             while self._current().kind==TokenKind.IDENTIFIER and self._current().value!="=":
                 name_tokens.append(self._advance())
             raw_name=" ".join(token.value for token in name_tokens)
-            name=self._canonical_property_name(raw_name)
+            name=canonical_property_name(raw_name)
             is_style_reference=(raw_name=="use style")
             if self._current().value!="=":
                 self._error("Expected '=' after property name",self._current(),"PARPROP002")

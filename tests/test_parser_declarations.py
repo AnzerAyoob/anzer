@@ -49,6 +49,17 @@ class DeclarationParserTests(unittest.TestCase):
         self.assertTrue(any(d.code == "PARPROP005" for d in errors))
         self.assertEqual([p.name for p in doc.declarations[0].properties], ["font-family"])
 
+    def test_equivalent_separators_and_aliases_report_duplicates_in_their_own_layers(self):
+        doc, lex, errors = self.parse(
+            'anzer make section style 1: minimum---width=20, min-width=30;' "\n"
+            'anzer make section: use style="section style 1", text-size=12, font  size=16 {}'
+        )
+        self.assertEqual(lex, [])
+        self.assertEqual([error.code for error in errors], ["PARPROP005", "PARPROP005"])
+        self.assertEqual([error.location.line for error in errors], [2, 3])
+        self.assertEqual([p.name for p in doc.declarations[0].properties], ["min-width"])
+        self.assertEqual([p.name for p in doc.declarations[1].properties], ["font-size"])
+
     def test_multiple_properties_and_scalar_types(self):
         doc, lex, errors = self.parse('anzer make button: text="Go", width=120, active=true;')
         self.assertEqual(lex, [])

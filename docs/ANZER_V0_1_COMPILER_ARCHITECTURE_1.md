@@ -288,43 +288,38 @@ No runtime should be emitted if the document contains no toggle behavior.
 
 ## 13. Compiler API
 
-Keep the compiler callable independently from the CLI.
-
-Suggested API shape:
+Compilation is callable independently from the CLI. The primary output is Anzer-native compiled representation (ANZIR), not HTML.
 
 ```python
 compile_source(source_text: str, filename: str = "<input>") -> CompileResult
 ```
 
-CompileResult contains:
-- success flag
-- diagnostics
-- generated HTML (only on success)
-- generated CSS (only on success, if separate)
-- optional runtime flag/content (only when needed)
-- compiler version
+CompileResult contains success, diagnostics, ANZIR on success, compiler version, and renderer/runtime metadata where needed.
 
-The CLI should be a thin layer over this API. It should not duplicate parsing or validation.
+ANZIR is a versioned, deterministic representation of the validated and normalized document, consumed by the Anzer runtime and future tooling. It is distinct from source syntax and HTML export.
+
+Primary contract: `Anzer source → validated/normalized ANZIR`.
+
+HTML export may be an optional compatibility backend. It is not the primary output contract and is not required for Anzer document identity or runtime operation.
 
 ## 14. CLI v0.1
 
-Keep command-line scope small.
+Anzer-first minimal CLI:
 
-Proposed initial commands:
-- `anzer compile input.anzer`
-- optional explicit output path flag, once output packaging is decided
-- `anzer check input.anzer` (validation without writing output)
+- `anzer compile input.anzer` — compile into native ANZIR; default output `input.anzir`.
+- `anzer check input.anzer` — validate without writing.
+- `anzer render input.anzer` — render using the Anzer runtime; viewer behavior is specified separately.
+- optional `-o output.anzir`.
 
-Avoid watch mode, dev server, package manager, project scaffolding, or multi-file imports in v0.1.
+The source `.anzer` is the primary authoring artifact. The compiled `.anzir` is a versioned machine-readable representation, not HTML.
 
-The CLI must:
-- report diagnostics to stderr
-- return nonzero exit code for compilation errors
-- not overwrite output on failed compilation
-- write deterministic artifacts on success
-- avoid creating unnecessary files for check-only mode
+HTML export is optional and must be explicitly invoked (e.g. `anzer export-html input.anzer`). It is never the default compile behavior.
 
-The exact output format (single HTML file versus HTML/CSS/runtime assets) is an implementation decision to finalize before renderer coding. Architecture supports either without changing the language.
+Avoid watch mode, dev server, project scaffolding, package manager, or multi-file imports in v0.1.
+
+CLI requirements: diagnostics to stderr; nonzero exit on errors; no output overwrite on failed compile; deterministic ANZIR; check-only creates no artifacts.
+
+Define the ANZIR schema/version before implementing serialization. Runtime consumes ANZIR and renders documents. Initial runtime delivery (local viewer/application or other) is a separate decision; HTML may be an internal rendering mechanism but is not Anzer's required output artifact.
 
 ## 15. Diagnostics
 

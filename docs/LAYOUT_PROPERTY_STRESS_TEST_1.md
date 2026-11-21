@@ -1,6 +1,6 @@
 # Layout Property Stress Test 1
 
-Status: **Test proposal**
+Status: **Specification stress suite for accepted v0.1 layout rules; compiler execution pending**
 Scope: Accepted Anzer v0.1 layout catalog
 Purpose: Validate accepted layout grammar and compatibility rules before compiler implementation.
 

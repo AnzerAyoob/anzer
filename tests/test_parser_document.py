@@ -34,9 +34,13 @@ class DocumentParserTests(unittest.TestCase):
         _, _, errors = self.parse("<anzer start>\n<anzer start>\n<anzer end>")
         self.assertTrue(any(d.code == "PARDOC001" for d in errors))
 
-    def test_body_is_not_silently_accepted(self):
-        _, _, errors = self.parse("<anzer start>\nanzer make paragraph: text=\"Hi\";\n<anzer end>")
-        self.assertTrue(any(d.code == "PARDOC006" for d in errors))
+    def test_simple_declaration_is_parsed(self):
+        doc, lex, errors = self.parse("<anzer start>\nanzer make paragraph: text=\"Hi\";\n<anzer end>")
+        self.assertEqual(lex, [])
+        self.assertEqual(errors, [])
+        self.assertEqual(len(doc.declarations), 1)
+        self.assertEqual(doc.declarations[0].name, "paragraph")
+        self.assertEqual(doc.declarations[0].properties[0].value, "Hi")
 
 
 if __name__ == "__main__":

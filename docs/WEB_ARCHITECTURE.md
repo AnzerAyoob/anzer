@@ -6,13 +6,7 @@ The initial target is the browser, using existing web standards.
 
 ## Planned compilation outputs
 
-A build may produce:
-
-- `dist/index.html`
-- `dist/assets/anzer.css`
-- `dist/assets/anzer.js`
-
-The exact output layout is subject to implementation decisions.
+For v0.1, the compiler emits a single self-contained HTML file. CSS is embedded, and the toggle runtime is embedded only when needed. The default filename is the source filename with `.html` substituted. Separate asset files are not the v0.1 output contract.
 
 ## Compatibility
 

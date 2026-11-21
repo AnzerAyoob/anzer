@@ -1,0 +1,23 @@
+<anzer start>
+
+anzer make title:
+    text="Welcome to Anzer",
+    color="#111827";
+
+anzer make paragraph style 1:
+    type="paragraph",
+    font="Arial",
+    text-size="16px",
+    color="#374151";
+
+anzer make paragraph:
+    use style="paragraph style 1",
+    text="A simple landing page built with readable Anzer commands.";
+
+anzer make button:
+    text="Learn More",
+    background="#2563eb",
+    color="white",
+    on click="show message: Hello!";
+
+<anzer end>

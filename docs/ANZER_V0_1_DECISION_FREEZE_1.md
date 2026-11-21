@@ -3,6 +3,8 @@
 Status: **User-approved v0.1 decisions recorded; implementation decisions finalized**
 Scope: v0.1 language simplicity, grammar, semantics, styles, layout, elements, security, and implementation boundaries.
 
+This freeze records decisions for the initial v0.1 compiler only. It does not narrow Anzer's long-term ambition to replace HTML as the author-facing web language. HTML/CSS/JavaScript output is the current compatibility target; any Anzer-native runtime or browser execution model is future work and is not implied to exist.
+
 ## 1. Language philosophy
 
 Anzer v0.1 is intentionally a **simple, human-readable command language**. It should feel like writing normal text commands, not like learning a rigid programming language or memorizing technical vocabulary.

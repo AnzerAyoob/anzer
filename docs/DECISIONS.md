@@ -12,7 +12,7 @@ Decisions are recorded as the project develops. Revisit accepted decisions only 
 
 ## D-003: Unified source
 - **Decision:** Explore one authoring file for structure, style, and behavior.
-- **Status:** Accepted as project direction.
+- **Status:** Accepted.
 
 ## D-004: Hosting and development
 - **Decision:** Zero-budget local development, GitHub as primary public source and documentation host.
@@ -53,3 +53,11 @@ Decisions are recorded as the project develops. Revisit accepted decisions only 
 ## D-013: Visual presets
 - **Decision:** Named visual presets such as `soft`, `hard`, `raised`, `3D`, and `glow` may be used, but each must have standardized deterministic rendering and supported parameters.
 - **Status:** Accepted design direction.
+
+## D-014: Containers and nesting
+- **Decision:** Use brace-delimited container blocks for nesting. Opening `{` begins a container body and `}` closes the most recently opened container. Containers may contain elements and nested containers; empty containers are allowed. Unmatched braces and an `<anzer end>` with open containers must be diagnosed.
+- **Status:** Accepted design direction; exact grammar remains provisional.
+
+## D-015: Flexible style definition
+- **Decision:** Support both reusable named/numbered style definitions and inline properties attached to an element. Reusable styles are applied with `use style`; inline properties avoid defining a separate style when reuse is unnecessary. Both workflows should coexist.
+- **Status:** Accepted design direction; exact syntax remains provisional.

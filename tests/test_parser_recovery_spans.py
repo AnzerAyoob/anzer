@@ -12,13 +12,13 @@ class ParserRecoveryAndSpanTests(unittest.TestCase):
         return source, document, lex_errors, parse_errors
 
     def test_html_error_recovers_to_following_element(self):
-        doc, lex, errors = self.parse('anzer use html=123; anzer make paragraph: text="ok";')
+        source, doc, lex, errors = self.parse('anzer use html=123; anzer make paragraph: text="ok";')
         self.assertEqual(lex, [])
         self.assertTrue(any(e.code == "PARHTML003" for e in errors))
         self.assertEqual([getattr(node, "name", None) for node in doc.declarations], ["paragraph"])
 
     def test_style_reference_error_recovers_to_following_element(self):
-        doc, lex, errors = self.parse('anzer make paragraph: use style=1; anzer make button;')
+        source, doc, lex, errors = self.parse('anzer make paragraph: use style=1; anzer make button;')
         self.assertEqual(lex, [])
         self.assertTrue(any(e.code == "PARSTYLE005" for e in errors))
         self.assertEqual([node.name for node in doc.declarations], ["paragraph", "button"])

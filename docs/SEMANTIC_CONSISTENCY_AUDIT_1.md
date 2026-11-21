@@ -274,7 +274,18 @@ This duplicates A-03 and affects grammar/layout/style stress examples. `card` sh
 10. Global baseline CSS. Recommendation: explicitly accept/reject.
 11. Diagnostics/recovery contract. Recommendation: define before parser implementation.
 
-## 5. Proposed audit closure criteria
+## 5. Corrections applied during this audit
+
+The following documentation-only reconciliations were applied after creating this audit:
+
+- Replaced legacy `text-size` with canonical `font-size` in property rules, property stress tests, and core grammar stress test.
+- Replaced `card` element examples with `container` in the core grammar stress test; `card` is not a built-in element.
+- Added a reconciliation note to the historical syntax audit, pointing readers to newer decisions and clarifying that the old HTML-embedding recommendation is superseded.
+
+Commits: `3f969aa118e9206b1bb254a5a57d65df1cb6755d`, `4ea05f35099fe4e7d1f301c537f043336b8f2440`, `186e4d9de3df691bd12469e04fc587c47f536877`, `e3ec90b1b8b09bef650c06dc368572fe34bc2554`.
+
+
+## 6. Proposed audit closure criteria
 
 - [ ] Immediate documentation corrections applied.
 - [ ] User decisions resolved and recorded as accepted, not merely proposed.
@@ -283,6 +294,6 @@ This duplicates A-03 and affects grammar/layout/style stress examples. `card` sh
 - [ ] Cross-document consistency checks are automated or documented as a manual checklist.
 - [ ] Executable tests are implemented once compiler exists; no specification suite is misrepresented as runtime-tested.
 
-## 6. Final verdict
+## 7. Final verdict
 
 Anzer v0.1 is **not ready to freeze**. The base syntax and strings are comparatively mature; the remaining blockers are semantic compatibility, security, accessibility, property grammar precision, and document reconciliation. The recommended next move is to apply the immediate documentation corrections, then resolve the user-decision list in a focused review. Do not begin compiler implementation until those decisions are frozen or explicitly deferred with a clear v0.1 boundary.

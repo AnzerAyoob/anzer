@@ -2,9 +2,9 @@
 
 ## Current direction
 
-Anzer is a command-oriented web authoring language intended to make website creation unusually approachable. It should let authors describe content, semantic type, appearance, and behavior in one source file, compiling to standard browser output.
+Anzer is a command-oriented web authoring language intended to make website creation approachable without sacrificing precision. Authors should describe content, semantic type, appearance, and behavior in one `.anzer` source file.
 
-The aim is simplicity—not a claim that Anzer is already the easiest language. That claim must be tested against real tasks and beginner usability.
+The long-term ambition is to replace HTML as the primary author-facing language. The initial compiler milestone, however, targets standard HTML, CSS, and JavaScript for compatibility with existing browsers and hosting. That output target should not be mistaken for Anzer's ultimate identity or ceiling.
 
 ## Core design
 
@@ -14,7 +14,7 @@ The aim is simplicity—not a claim that Anzer is already the easiest language. 
 - Element defaults reduce mandatory repetition.
 - Reusable numbered styles are independent of content position.
 - Compact single-line and multiline forms are both supported and semantically equivalent.
-- Output is standard HTML, CSS, and JavaScript.
+- Initial compiler output is standard HTML, CSS, and JavaScript.
 
 ## Element semantics and defaults
 
@@ -42,7 +42,7 @@ Friendly presets such as `soft`, `hard`, `raised`, `3D`, and `glow` may represen
 
 - Keep the language consistent and learnable.
 - Avoid needless punctuation and duplicated information.
-- Preserve accessibility and semantic HTML.
+- Preserve accessibility and semantic HTML during the compatibility-target phase.
 - Keep compilation deterministic.
 - Escape and validate emitted content.
 - Separate parsing, validation, and code generation.

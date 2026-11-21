@@ -239,7 +239,6 @@ class SemanticValidator:
                     target=str(props["target"].value).lstrip("#")
                     if target not in self._ids: self._error(f"Toggle target '{target}' does not resolve to a container id",props["target"].span,"SEMACT004")
                 if node.children is not None: self._validate_targets(node.children)
-, re.I)
 SUPPORTED_UNITS = {'px','%','em','rem','vw','vh','vmin','vmax','ch','ex','cm','mm','in','pt','pc'}
 def _length(token, allow_negative=False, allow_auto=False, allow_none=False):
     t = token.strip().lower()

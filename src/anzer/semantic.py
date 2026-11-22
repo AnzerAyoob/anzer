@@ -1,10 +1,12 @@
-"""Semantic validation and effective properties for immutable Anzer v0.1 ASTs."""
+"""Semantic validation and validated property layers for Anzer v0.1 ASTs."""
 
 import math
 import re
-from dataclasses import replace
+from collections.abc import Mapping
+from dataclasses import dataclass, field, replace
 from decimal import Decimal
 from ipaddress import IPv4Address, IPv6Address
+from types import MappingProxyType
 from urllib.parse import unquote, urlsplit
 
 from .ast import Document, ElementDeclaration, HtmlEmbedding, PropertyAssignment, StyleDeclaration
@@ -20,7 +22,15 @@ REQUIRED = {
     "link": ("text", "url"),
     "image": ("src",),
 }
-DEFAULT_TAGS = {"title": "h1", "paragraph": "p", "section": "section", "container": "div"}
+DEFAULT_TAGS = {
+    "title": "h1",
+    "paragraph": "p",
+    "button": "button",
+    "link": "a",
+    "image": "img",
+    "section": "section",
+    "container": "div",
+}
 TYPE_ALLOWED = {
     "title": {"h1", "h2", "h3", "h4", "h5", "h6"},
     "paragraph": {"p", "span", "div"},
@@ -275,15 +285,51 @@ def _valid_url(value, *, mailto):
         return False
 
 
+@dataclass(frozen=True)
+class _PropertyLayers:
+    style: Mapping[str, PropertyAssignment]
+    direct: Mapping[str, PropertyAssignment]
+
+    def merge(self) -> dict[str, PropertyAssignment]:
+        return {**self.style, **self.direct}
+
+    def resolve(self, node: ElementDeclaration) -> dict[str, PropertyAssignment]:
+        """Resolve authored assignments and the legacy tag defaults."""
+        properties = self.merge()
+        if node.name in TYPE_ALLOWED and "type" not in properties:
+            properties["type"] = PropertyAssignment("type", DEFAULT_TAGS[node.name], node.span)
+        display = properties.get("display")
+        if display is not None and display.value in FLEX_DISPLAYS:
+            for name in ALIGNMENT.intersection(properties):
+                prop = properties[name]
+                if prop.value in {"start", "end"}:
+                    properties[name] = replace(prop, value="flex-" + prop.value)
+        return properties
+
+
+@dataclass(frozen=True)
+class SemanticResult:
+    """Snapshot of semantic analysis for one immutable AST."""
+
+    document: Document
+    diagnostics: tuple[Diagnostic, ...]
+    _layers: Mapping[int, _PropertyLayers] = field(repr=False, compare=False)
+
+    def properties_for(self, node: ElementDeclaration) -> dict[str, PropertyAssignment]:
+        """Resolve canonical assignments from validated layers, keeping their spans."""
+        return self._layers[id(node)].resolve(node)
+
+
 class SemanticValidator:
     def __init__(self):
         self.diagnostics = []
-        self._effective = {}
+        self._result: SemanticResult | None = None
 
     def properties_for(self, node: ElementDeclaration) -> dict[str, PropertyAssignment]:
-        """Return effective assignments for an element in the validated document."""
-        _, properties = self._effective[id(node)]
-        return dict(sorted(properties.items()))
+        """Return the legacy ordered property view of the most recent validation."""
+        if self._result is None:
+            raise KeyError(id(node))
+        return dict(sorted(self._result.properties_for(node).items()))
 
     def _error(self, message, span, code, category=DiagnosticCategory.SEMANTIC):
         self.diagnostics.append(Diagnostic(category, message, span.start, code))
@@ -291,9 +337,15 @@ class SemanticValidator:
     def _invalid(self, message, span, code):
         self._error(message, span, code, DiagnosticCategory.VALIDATION)
 
-    def validate(self, document: Document):
+    def validate(self, document: Document) -> list[Diagnostic]:
+        """Validate a document and return the Phase 6 diagnostics list."""
+        self.analyze(document)
+        return self.diagnostics
+
+    def analyze(self, document: Document) -> SemanticResult:
+        """Validate an AST whose lexer and parser completed without errors."""
         self.diagnostics = []
-        self._effective = {}
+        self._property_layers: dict[int, _PropertyLayers] = {}
         self._ids = {}
         self._invalid_target_ids = set()
         self._duplicate_ids = set()
@@ -319,8 +371,11 @@ class SemanticValidator:
 
         self.diagnostics.sort(key=lambda diagnostic: diagnostic.location.offset)
         if self.diagnostics:
-            self._effective.clear()
-        return self.diagnostics
+            self._property_layers.clear()
+        self._result = SemanticResult(
+            document, tuple(self.diagnostics), MappingProxyType(self._property_layers)
+        )
+        return self._result
 
     def _validate_style(self, style):
         if style.target_kind not in ELEMENT_KINDS:
@@ -353,9 +408,6 @@ class SemanticValidator:
         if node.children is None and is_container:
             self._error(f"Container '{kind}' must use a block body", node.span, "SEMELEM003")
 
-        defaults = {}
-        if kind in DEFAULT_TAGS:
-            defaults["type"] = PropertyAssignment("type", DEFAULT_TAGS[kind], node.span)
         style = {}
         reference_valid = True
         if node.style_reference is not None:
@@ -370,12 +422,13 @@ class SemanticValidator:
                 style = declaration[1]
 
         direct = self._prepare_layer(kind, node.properties, "element")
-        effective = defaults | style | direct
+        layers = _PropertyLayers(MappingProxyType(style), MappingProxyType(direct))
+        effective = layers.merge()
         if reference_valid:
             for name in REQUIRED.get(kind, ()):
                 if name not in effective:
                     self._error(f"Element '{kind}' requires property '{name}'", node.span, "SEMELEM004")
-        self._effective[id(node)] = (node, effective)
+        self._property_layers[id(node)] = layers
 
         id_assignment = effective.get("id")
         id_span = node.span if "id" in style and "id" not in direct else None
@@ -470,11 +523,6 @@ class SemanticValidator:
                 )
                 if first is not None:
                     self._invalid(message, first.span, code)
-        if mode in FLEX_DISPLAYS:
-            for name in ALIGNMENT.intersection(properties):
-                prop = properties[name]
-                if prop.value in {"start", "end"}:
-                    properties[name] = replace(prop, value="flex-" + prop.value)
 
     def _collect_id(self, prop, eligible, reference_span):
         if prop is None or not isinstance(prop.value, str) or not prop.value.strip():

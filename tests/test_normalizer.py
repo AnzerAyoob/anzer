@@ -91,12 +91,82 @@ class NormalizerTests(unittest.TestCase):
         })
         self.assertEqual(self.values(grid), {
             "align-items": "end",
+            "column-gap": "2em",
             "display": "grid",
-            "gap": "0 2em",
             "grid-template-columns": "auto 0.5fr 3px 40%",
             "justify-content": "start",
+            "row-gap": "0",
             "type": "section",
         })
+
+    def test_gap_axes_resolve_within_a_layer(self):
+        cases = (
+            ('gap=10', {"row-gap": "10px", "column-gap": "10px"}),
+            ('gap="10 20"', {"row-gap": "10px", "column-gap": "20px"}),
+            ('row-gap=0', {"row-gap": "0"}),
+            ('column-gap="2 REM"', {"column-gap": "2rem"}),
+            ('gap="10 20", row-gap=30', {"row-gap": "30px", "column-gap": "20px"}),
+            ('gap="10 20", column-gap=40', {"row-gap": "10px", "column-gap": "40px"}),
+            ('gap="10 20", row-gap=30, column-gap=40', {"row-gap": "30px", "column-gap": "40px"}),
+        )
+        for declarations, expected in cases:
+            with self.subTest(declarations=declarations):
+                section, = self.normalize(
+                    f'anzer make section: display="grid", {declarations} {{}}'
+                ).elements
+                self.assertEqual(self.values(section), {"display": "grid", "type": "section", **expected})
+
+    def test_gap_axes_merge_independently_across_layers(self):
+        cases = (
+            ('gap="5 8"', 'row-gap=12', ("12px", "8px")),
+            ('gap="5 8"', 'column-gap=40', ("5px", "40px")),
+            ('row-gap=5', 'gap="20 30"', ("20px", "30px")),
+            ('column-gap=8', 'gap="20 30"', ("20px", "30px")),
+            ('row-gap=5, column-gap=8', 'gap="20 30"', ("20px", "30px")),
+            ('gap="5 8"', 'gap="20 30"', ("20px", "30px")),
+            ('gap="5 8"', 'gap="20 30", row-gap=40', ("40px", "30px")),
+            ('gap="5 8"', 'gap="20 30", column-gap=40', ("20px", "40px")),
+            ('gap="5 8", row-gap=6', 'column-gap=40', ("6px", "40px")),
+            ('gap="5 8", column-gap=6', 'row-gap=40', ("40px", "6px")),
+        )
+        for style, direct, (row, column) in cases:
+            with self.subTest(style=style, direct=direct):
+                section, = self.normalize(
+                    f'anzer make section style 1: display="flex", {style};\n'
+                    f'anzer make section: use style="section style 1", {direct} {{}}'
+                ).elements
+                self.assertEqual(self.values(section), {
+                    "column-gap": column, "display": "flex", "row-gap": row, "type": "section",
+                })
+
+    def test_gap_resolution_is_independent_of_declaration_order(self):
+        first = self.normalize(
+            'anzer make section style 1: display="grid", gap="5 8", column-gap=9;\n'
+            'anzer make section: use style="section style 1", gap="20 30", row-gap=40 {}'
+        )
+        second = self.normalize(
+            'anzer make section style 1: column-gap=9, gap="5 8", display="grid";\n'
+            'anzer make section: row-gap=40, gap="20 30", use style="section style 1" {}'
+        )
+        self.assertEqual(first, second)
+        self.assertEqual(first, self.normalize(
+            'anzer make section: display="grid", row-gap=40, column-gap=30 {}'
+        ))
+        self.assertEqual([prop.name for prop in first.elements[0].properties], [
+            "column-gap", "display", "row-gap", "type",
+        ])
+
+    def test_resolved_gap_axes_keep_their_winning_source_spans(self):
+        document = self.parse(
+            'anzer make section style 1: display="grid", gap="5 8";\n'
+            'anzer make section: use style="section style 1", row-gap=12 {}'
+        )
+        style, element = document.declarations
+        result = SemanticValidator().analyze(document)
+        section, = normalize_document(document, result).elements
+        spans = {prop.name: prop.span for prop in section.properties}
+        self.assertEqual(spans["column-gap"], style.properties[1].span)
+        self.assertEqual(spans["row-gap"], element.properties[0].span)
 
     def test_border_components_override_shorthand_and_cross_layers(self):
         inherited, direct = self.normalize(

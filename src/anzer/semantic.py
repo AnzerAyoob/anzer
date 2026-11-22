@@ -285,6 +285,23 @@ def _valid_url(value, *, mailto):
         return False
 
 
+def _resolve_gap_layer(
+    layer: Mapping[str, PropertyAssignment],
+) -> Mapping[str, PropertyAssignment]:
+    gap = layer.get("gap")
+    if gap is None:
+        return layer
+
+    # Validation has already reduced each length to a single canonical token.
+    assert isinstance(gap.value, str)
+    row, _, column = gap.value.partition(" ")
+    resolved = dict(layer)
+    del resolved["gap"]
+    resolved.setdefault("row-gap", replace(gap, name="row-gap", value=row))
+    resolved.setdefault("column-gap", replace(gap, name="column-gap", value=column or row))
+    return resolved
+
+
 @dataclass(frozen=True)
 class _PropertyLayers:
     style: Mapping[str, PropertyAssignment]
@@ -294,8 +311,8 @@ class _PropertyLayers:
         return {**self.style, **self.direct}
 
     def resolve(self, node: ElementDeclaration) -> dict[str, PropertyAssignment]:
-        """Resolve authored assignments and the legacy tag defaults."""
-        properties = self.merge()
+        """Resolve validated layers into effective assignments with tag defaults."""
+        properties = {**_resolve_gap_layer(self.style), **_resolve_gap_layer(self.direct)}
         if node.name in TYPE_ALLOWED and "type" not in properties:
             properties["type"] = PropertyAssignment("type", DEFAULT_TAGS[node.name], node.span)
         display = properties.get("display")

@@ -106,6 +106,12 @@ class SemanticValidatorTests(unittest.TestCase):
     def test_gap_negative_rejected(self):
         self.assertTrue(any(e.code=="SEMLOUT005" for e in self.validate('anzer make container: display="flex", gap="-2px" { }')))
 
+    def test_explicit_axes_do_not_hide_an_invalid_gap_shorthand(self):
+        self.assert_codes(
+            'anzer make section: display="grid", gap="10px, 20px", row-gap=1, column-gap=2 {}',
+            "SEMLOUT005",
+        )
+
     def test_border_longhand_overrides_shorthand_regardless_of_order(self):
         resolved = self.effective('anzer make paragraph: text="x", border-color="blue", border="2px solid red";')
         self.assertEqual(self.border_values(resolved), ("2px", "solid", "blue"))
@@ -312,10 +318,11 @@ class SemanticValidatorTests(unittest.TestCase):
         )
         for name, value in {
             "width": "12vw", "min-height": "0", "max-width": "none", "padding": "1cm 0",
-            "margin": "-2pt auto", "border-radius": "0.25rem", "gap": "1cm 2px",
+            "margin": "-2pt auto", "border-radius": "0.25rem", "column-gap": "2px",
             "row-gap": "2rem", "grid-template-columns": "0 0.5fr 2vmin 50%",
         }.items():
             self.assertEqual(properties[name].value, value)
+        self.assertNotIn("gap", properties)
 
     def test_property_specific_lengths_reject_malformed_and_negative_values(self):
         cases = {

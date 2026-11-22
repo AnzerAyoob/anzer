@@ -1,10 +1,12 @@
 """Serialize the validated, normalized model into a complete HTML document."""
 
+from dataclasses import dataclass
 from html import escape
 
 from ..normalize import NormalizedDocument, NormalizedElement, NormalizedHtml, NormalizedProperty
 from ..semantic import CONTAINER_KINDS, DEFAULT_TAGS, TYPE_ALLOWED
 from .css import BASELINE_CSS, CSS_PROPERTIES, render_declarations
+from .runtime import TOGGLE_CSS, TOGGLE_SCRIPT
 
 _TAGS = frozenset(DEFAULT_TAGS.values()).union(*TYPE_ALLOWED.values())
 _ATTRIBUTES = {
@@ -21,9 +23,41 @@ _DOCUMENT_START = (
     '<meta charset="utf-8">\n'
     '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
     "<title>Anzer document</title>\n"
-    f"<style>\n{BASELINE_CSS}\n</style>\n"
-    "</head>\n<body>"
+    f"<style>\n{BASELINE_CSS}"
 )
+
+
+@dataclass(frozen=True)
+class _ToggleTarget:
+    key: str
+    initially_collapsed: bool
+
+
+def _prepare_toggle_targets(document: NormalizedDocument) -> dict[str, _ToggleTarget]:
+    references: set[str] = set()
+    candidates: dict[str, bool] = {}
+    pending = list(reversed(document.elements))
+    while pending:
+        node = pending.pop()
+        if not isinstance(node, NormalizedElement):
+            continue
+        pending.extend(reversed(node.children))
+        if node.toggle is not None:
+            references.add(node.toggle.target_id)
+        if node.kind in CONTAINER_KINDS and node.shape == "container":
+            properties = {
+                prop.name: prop.value for prop in node.properties
+                if isinstance(prop, NormalizedProperty)
+            }
+            if "id" in properties:
+                candidates[properties["id"]] = properties.get("display") == "none"
+    return {
+        target_id: _ToggleTarget(str(index), collapsed)
+        for index, (target_id, collapsed) in enumerate(
+            ((name, collapsed) for name, collapsed in candidates.items() if name in references),
+            start=1,
+        )
+    }
 
 
 def render_document(document: NormalizedDocument, *, allow_trusted_html: bool = False) -> str:
@@ -34,9 +68,15 @@ def render_document(document: NormalizedDocument, *, allow_trusted_html: bool = 
     """
     if not isinstance(document, NormalizedDocument):
         raise TypeError("Expected a normalized Anzer document")
+    toggle_targets = _prepare_toggle_targets(document)
     parts = [_DOCUMENT_START]
+    if toggle_targets:
+        parts.append(f"\n{TOGGLE_CSS}")
+    parts.append("\n</style>\n</head>\n<body>")
     for element in document.elements:
-        _render_element(element, parts, allow_trusted_html)
+        _render_element(element, parts, allow_trusted_html, toggle_targets)
+    if toggle_targets:
+        parts.append(f"\n<script>\n{TOGGLE_SCRIPT}\n</script>\n")
     parts.append("</body>\n</html>\n")
     return "".join(parts)
 
@@ -47,7 +87,10 @@ def _escape(value: str, *, quote: bool) -> str:
 
 
 def _render_element(
-    element: NormalizedElement, parts: list[str], allow_trusted_html: bool
+    element: NormalizedElement,
+    parts: list[str],
+    allow_trusted_html: bool,
+    toggle_targets: dict[str, _ToggleTarget],
 ) -> None:
     if not isinstance(element, NormalizedElement):
         raise ValueError("Expected a normalized element at this position")
@@ -84,6 +127,17 @@ def _render_element(
         else:
             raise ValueError(f"No renderer mapping for normalized property {name!r}")
 
+    target = toggle_targets.get(attributes.get("id", ""))
+    if target is not None and element.kind in CONTAINER_KINDS:
+        attributes["data-anzer-toggle-target"] = target.key
+        if target.initially_collapsed:
+            attributes["data-anzer-display"] = "none"
+            attributes["hidden"] = ""
+    if element.toggle is not None and element.toggle.target_id in toggle_targets:
+        target = toggle_targets[element.toggle.target_id]
+        attributes["data-anzer-toggle-key"] = target.key
+        attributes["aria-expanded"] = "false" if target.initially_collapsed else "true"
+
     if styles:
         attributes["style"] = render_declarations(styles)
     rendered_attrs = "".join(
@@ -104,5 +158,5 @@ def _render_element(
                 raise ValueError("Trusted HTML requires explicit acknowledgement")
             parts.append(child.html)
         else:
-            _render_element(child, parts, allow_trusted_html)
+            _render_element(child, parts, allow_trusted_html, toggle_targets)
     parts.append(f"</{tag}>")

@@ -170,17 +170,19 @@ class RendererTests(unittest.TestCase):
             "column-gap: 2rem; display: flex; row-gap: 0;",
         ])
 
-    def test_toggle_metadata_is_inert_and_preserves_escaped_id(self):
+    def test_toggle_metadata_and_initial_state_preserve_escaped_id(self):
         html = self.render(
             'anzer make button: text="Open", action="toggle", target="a&b";\n'
             'anzer make section: id="a&b", display="grid" {}'
         )
         self.assertIn(
-            '<button data-anzer-action="toggle" data-anzer-target="a&amp;b" type="button">'
-            'Open</button><section id="a&amp;b" style="display: grid;"></section>',
+            '<button aria-expanded="true" data-anzer-action="toggle" data-anzer-target="a&amp;b" '
+            'data-anzer-toggle-key="1" type="button">Open</button>'
+            '<section data-anzer-toggle-target="1" id="a&amp;b" style="display: grid;"></section>',
             html,
         )
-        self.assertEqual(_Tags(html).attributes("script"), [])
+        self.assertEqual(_Tags(html).attributes("script"), [{}])
+        self.assertLess(html.index("</section>"), html.index("<script>"))
 
     def test_equivalent_normalized_documents_render_identical_bytes(self):
         a = self.normalize(

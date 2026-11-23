@@ -42,6 +42,39 @@ class DocumentParserTests(unittest.TestCase):
         self.assertEqual(doc.declarations[0].name, "paragraph")
         self.assertEqual(doc.declarations[0].properties[0].value, "Hi")
 
+    def test_trailing_whitespace_is_allowed(self):
+        doc, lex, errors = self.parse("<anzer start>\r\n<anzer end> \r\n\t")
+        self.assertEqual(lex, [])
+        self.assertEqual(errors, [])
+        self.assertEqual(doc.end_marker_span.end.offset, 26)
+
+    def test_tokens_after_end_marker_are_rejected(self):
+        document = '<anzer start>\nanzer make paragraph: text="kept";\n<anzer end>'
+        for trailing in ('anzer make paragraph: text="outside";', '}'):
+            with self.subTest(trailing=trailing):
+                doc, lex, errors = self.parse(f"{document}\n  {trailing}")
+                self.assertEqual(lex, [])
+                self.assertEqual([d.code for d in errors], ["PARDOC006"])
+                self.assertEqual(
+                    errors[0].format("doc.anzer"),
+                    "doc.anzer:4:3: error: Unexpected token after document end",
+                )
+                self.assertEqual([node.properties[0].value for node in doc.declarations], ["kept"])
+
+    def test_repeated_markers_after_end_still_report_duplicate_markers(self):
+        for marker in ("<anzer start>", "<anzer end>"):
+            with self.subTest(marker=marker):
+                _, lex, errors = self.parse(f"<anzer start>\n<anzer end>\n{marker}\n{marker}")
+                self.assertEqual(lex, [])
+                self.assertEqual([d.code for d in errors], ["PARDOC001", "PARDOC006"])
+                self.assertEqual((errors[1].location.line, errors[1].location.column), (3, 1))
+
+    def test_trailing_tokens_reported_even_if_statement_recovery_passes_end(self):
+        _, lex, errors = self.parse("<anzer start>\nanzer nope\n<anzer end>\nanzer make paragraph;")
+        self.assertEqual(lex, [])
+        self.assertEqual([d.code for d in errors], ["PARDECL002", "PARDOC006"])
+        self.assertEqual((errors[-1].location.line, errors[-1].location.column), (4, 1))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -68,8 +68,17 @@ class Parser:
                 self._advance(); continue
             if t.location.offset<start_end:
                 self._error("Unexpected token before document start",t,"PARDOC005"); self._advance(); continue
+            declaration_index = self.index
             node=self._parse_declaration()
             if node is not None: declarations.append(node)
+            if self.index == declaration_index:
+                # Statement recovery leaves closing braces for enclosing blocks.
+                # At document scope there is no block to consume the token.
+                self._advance()
+        for token in self.tokens:
+            if token.kind != TokenKind.EOF and token.location.offset >= end_end:
+                self._error("Unexpected token after document end", token, "PARDOC006")
+                break
         start_span=self._span(start.location.offset,start_end)
         end_span=self._span(end.location.offset,end_end)
         doc_span=self._span(start.location.offset,end_end)

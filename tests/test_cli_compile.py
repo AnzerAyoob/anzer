@@ -15,7 +15,7 @@ from anzer.render import render_document
 from anzer.render.runtime import TOGGLE_CSS, TOGGLE_SCRIPT
 from anzer.source import Source
 
-from test_cli_check import _document, _invoke
+from test_cli_check import _document, _installed_launcher, _invoke
 
 
 _PLAIN = _document('anzer make paragraph: text="Café";')
@@ -327,6 +327,66 @@ class CompileCommandTests(unittest.TestCase):
         self.assertEqual((bad.returncode, bad.stdout), (1, b""))
         self.assertIn(b"error[syntax/PARDECL002]", bad.stderr)
         self.assertFalse((work / "failed.html").exists())
+
+    def test_installed_compile_requires_acknowledgement_and_preserves_trusted_html(self):
+        launcher = _installed_launcher(self)
+        source = self.directory / "trusted.anzer"
+        original = _TRUSTED.encode("utf-8")
+        source.write_bytes(original)
+        entries = set(self.directory.iterdir())
+        args = [str(launcher), "compile", source.name]
+
+        refused = subprocess.run(args, cwd=self.directory, capture_output=True, timeout=10)
+        self.assertEqual((refused.returncode, refused.stdout), (1, b""), refused.stderr)
+        self.assertTrue(
+            refused.stderr.startswith(b"trusted.anzer:4:5: error[security/TRUSTED_HTML_REQUIRED]: "),
+            refused.stderr,
+        )
+        self.assertEqual(set(self.directory.iterdir()), entries)
+        self.assertEqual(source.read_bytes(), original)
+
+        accepted = subprocess.run(
+            [*args, "--allow-trusted-html"], cwd=self.directory, capture_output=True, timeout=10,
+        )
+        self.assertEqual((accepted.returncode, accepted.stdout), (0, b""), accepted.stderr)
+        self.assertEqual(len(accepted.stderr.splitlines()), 1, accepted.stderr)
+        self.assertTrue(
+            accepted.stderr.startswith(b"trusted.anzer:4:5: warning[security/TRUSTED_HTML_ENABLED]: "),
+            accepted.stderr,
+        )
+        output = source.with_suffix(".html")
+        html = output.read_bytes()
+        self.assertIn(b"<script>1</script>", html)
+        self.assertIn(b"<b>Second</b>", html)
+        self.assertEqual(set(self.directory.iterdir()), entries | {output})
+        self.assertEqual(source.read_bytes(), original)
+
+    def test_installed_compile_refuses_source_hard_link_alias(self):
+        launcher = _installed_launcher(self)
+        original = self.source.read_bytes()
+        alias = self.directory / "source-alias.html"
+        try:
+            os.link(self.source, alias)
+        except OSError as error:
+            if (
+                error.errno in {errno.ENOSYS, errno.ENOTSUP, errno.EOPNOTSUPP}
+                or getattr(error, "winerror", None) in {1, 50, 120}
+            ):
+                self.skipTest("The temporary filesystem does not support hard links")
+            raise
+
+        result = subprocess.run(
+            [str(launcher), "compile", self.source.name, "-o", alias.name],
+            cwd=self.directory, capture_output=True, timeout=10,
+        )
+        self.assertEqual((result.returncode, result.stdout), (2, b""), result.stderr)
+        self.assertEqual(result.stderr.splitlines(), [
+            b"source-alias.html: error[output/OUTPUT_COLLISION]: Output refers to the input file",
+        ])
+        self.assertEqual(self.source.read_bytes(), original)
+        self.assertEqual(alias.read_bytes(), original)
+        self.assertTrue(alias.samefile(self.source))
+        self.assertEqual(set(self.directory.iterdir()), {self.source, alias})
 
     @unittest.skipUnless(os.name == "nt", "Requires native Windows filesystem paths")
     def test_installed_launcher_publishes_original_305_character_destination(self):

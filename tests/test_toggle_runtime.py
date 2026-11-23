@@ -11,8 +11,11 @@ from anzer.lexer import Lexer
 from anzer.normalize import normalize_document
 from anzer.parser import Parser
 from anzer.render import render_document
+from anzer.render.runtime import TOGGLE_CSS, TOGGLE_SCRIPT
 from anzer.semantic import SemanticValidator
 from anzer.source import Source
+
+from test_cli_check import _document, _installed_launcher
 
 
 _BROWSER_BRIDGE = Path(__file__).with_name("run_browser.cjs")
@@ -137,6 +140,50 @@ class BrowserToggleTests(unittest.TestCase):
     def evaluate(self, html, expression):
         result, = self.browser_commands(html, _evaluate(expression))
         return result["result"]["value"]
+
+    def test_cli_published_toggle_runs_in_chromium(self):
+        launcher = _installed_launcher(self)
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+
+            def compile_html(name, body):
+                source = directory / f"{name}.anzer"
+                original = _document(body).encode("utf-8")
+                source.write_bytes(original)
+                entries = set(directory.iterdir())
+                result = subprocess.run(
+                    [str(launcher), "compile", source.name], cwd=directory,
+                    capture_output=True, timeout=10,
+                )
+                self.assertEqual((result.returncode, result.stdout, result.stderr), (0, b"", b""), result)
+                output = source.with_suffix(".html")
+                html = output.read_bytes()
+                self.assertEqual(source.read_bytes(), original)
+                self.assertEqual(set(directory.iterdir()), entries | {output})
+                return html
+
+            html = compile_html(
+                "toggle",
+                'anzer make button: text="Details", action="toggle", target="panel";\n'
+                'anzer make section: id="panel", text="More information" {}',
+            )
+            states = self.evaluate(html.decode("utf-8"), """(() => {
+                const button = document.querySelector("button");
+                const target = document.getElementById("panel");
+                const state = () => [
+                    target.hidden, Boolean(target.getClientRects().length),
+                    button.getAttribute("aria-expanded")
+                ];
+                const before = state();
+                button.click();
+                return [before, state()];
+            })()""")
+            self.assertEqual(states, [[False, True, "true"], [True, False, "false"]])
+
+            plain = compile_html("plain", 'anzer make paragraph: text="No toggle";')
+            self.assertNotIn(TOGGLE_CSS.encode("utf-8"), plain)
+            self.assertNotIn(TOGGLE_SCRIPT.encode("utf-8"), plain)
+            self.assertNotIn(b"<script", plain)
 
     def test_initial_state_and_repeated_activation_preserve_all_display_modes(self):
         displays = ("", "none", "block", "inline", "inline-block",

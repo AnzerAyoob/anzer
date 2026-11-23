@@ -1,7 +1,5 @@
-import os
 from pathlib import Path
 import subprocess
-import sysconfig
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -13,6 +11,8 @@ from anzer.parser import Parser
 from anzer.semantic import SemanticValidator
 from anzer.source import Source
 from anzer.tokens import TokenKind
+
+from test_cli_check import _installed_launcher
 
 
 _REPRODUCERS = (
@@ -138,15 +138,29 @@ class PunctuationParserTests(unittest.TestCase):
 
 class InstalledPunctuationTests(unittest.TestCase):
     def test_check_and_compile_reject_quoted_delimiters_without_output(self):
-        launcher = Path(sysconfig.get_path("scripts")) / ("anzer.exe" if os.name == "nt" else "anzer")
-        if not launcher.is_file():
-            self.skipTest("The anzer console entry point is not installed in this interpreter")
+        self.assert_installed_syntax_errors(
+            (name, _source(body).text, code, 2, column)
+            for name, body, _, code, column in _REPRODUCERS
+        )
+
+    def test_check_and_compile_reject_stray_brace_and_trailing_declaration_without_output(self):
+        self.assert_installed_syntax_errors((
+            ("stray-brace", _source('}\nanzer make paragraph: text="kept";').text, "PARDECL001", 2, 1),
+            (
+                "trailing-declaration",
+                '<anzer start>\n<anzer end>\nanzer make paragraph: text="late";\n',
+                "PARDOC006", 3, 1,
+            ),
+        ))
+
+    def assert_installed_syntax_errors(self, cases):
+        launcher = _installed_launcher(self)
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
-            for name, body, _, code, column in _REPRODUCERS:
+            for name, source, code, line, column in cases:
                 with self.subTest(name=name):
                     path = directory / f"{name}.anzer"
-                    original = _source(body).text.encode("utf-8")
+                    original = source.encode("utf-8")
                     path.write_bytes(original)
                     siblings = set(directory.iterdir())
                     for command in ("check", "compile"):
@@ -156,7 +170,7 @@ class InstalledPunctuationTests(unittest.TestCase):
                         )
                         self.assertEqual((result.returncode, result.stdout), (1, b""), result.stderr)
                         self.assertTrue(
-                            result.stderr.startswith(f"{path.name}:2:{column}: error[syntax/{code}]: ".encode()),
+                            result.stderr.startswith(f"{path.name}:{line}:{column}: error[syntax/{code}]: ".encode()),
                             result.stderr,
                         )
                         self.assertEqual(set(directory.iterdir()), siblings)

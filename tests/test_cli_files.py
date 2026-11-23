@@ -11,6 +11,8 @@ from unittest.mock import MagicMock, patch
 
 from anzer import cli_files
 
+from test_cli_check import _document, _invoke
+
 
 _HTML = b"<!doctype html>\n<html></html>\n"
 
@@ -349,6 +351,65 @@ class OutputPublicationTests(unittest.TestCase):
             self.assert_failure("OUTPUT_WRITE")
         link.assert_not_called()
         self.assertEqual(list(self.directory.iterdir()), [self.source])
+
+    def test_flush_and_close_failures_prevent_publication_and_clean_up(self):
+        source_bytes = _document('anzer make paragraph: text="Hello";').encode("utf-8")
+        self.source.write_bytes(source_bytes)
+        existing = self.directory / "existing.html"
+        existing.write_bytes(b"existing output")
+        mkstemp, close = tempfile.mkstemp, os.close
+
+        def close_then_fail(fd):
+            # Finalize the real descriptor before simulating a failure reported by close.
+            close(fd)
+            raise OSError(errno.EIO, "injected close failure")
+
+        stream = MagicMock()
+        stream.__enter__.return_value.write.side_effect = len
+        flush = stream.__enter__.return_value.flush
+        flush.side_effect = OSError(errno.EIO, "injected flush failure")
+
+        for operation, fault in (
+            ("flush", patch.object(os, "fdopen", return_value=stream)),
+            ("close", patch.object(os, "close", side_effect=close_then_fail)),
+        ):
+            staging_files = []
+
+            def create_staging(**kwargs):
+                staging = mkstemp(**kwargs)
+                staging_files.append(staging)
+                return staging
+
+            with (
+                self.subTest(operation=operation),
+                fault as injected,
+                patch.object(tempfile, "mkstemp", side_effect=create_staging) as create,
+                patch.object(os, "link") as link,
+                patch.object(os, "unlink", wraps=os.unlink) as unlink,
+            ):
+                self.assertEqual(
+                    _invoke("compile", str(self.source), "-o", str(self.output)),
+                    (2, "", f"{self.output}: error[output/OUTPUT_WRITE]: Could not write staging file\n"),
+                )
+                self.assertEqual(
+                    _invoke("compile", str(self.source), "-o", str(existing)),
+                    (2, "", f"{existing}: error[output/OUTPUT_EXISTS]: Output destination already exists\n"),
+                )
+                create.assert_called_once()
+                (fd, staging), = staging_files
+                if operation == "flush":
+                    flush.assert_called_once_with()
+                else:
+                    injected.assert_called_once_with(fd)
+                link.assert_not_called()
+                unlink.assert_called_once_with(staging)
+                with self.assertRaises(OSError) as closed:
+                    os.fstat(fd)
+                self.assertEqual(closed.exception.errno, errno.EBADF)
+                self.assertFalse(Path(staging).exists())
+                self.assertEqual(set(self.directory.iterdir()), {self.source, existing})
+                self.assertEqual(self.source.read_bytes(), source_bytes)
+                self.assertEqual(existing.read_bytes(), b"existing output")
 
     def test_link_error_is_success_when_final_entry_matches_staged_file(self):
         link = os.link

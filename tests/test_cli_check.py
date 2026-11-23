@@ -36,6 +36,13 @@ def _invoke(*args):
     return status, stdout.getvalue(), stderr.getvalue()
 
 
+def _installed_launcher(test):
+    launcher = Path(sysconfig.get_path("scripts")) / ("anzer.exe" if os.name == "nt" else "anzer")
+    if not launcher.is_file():
+        test.skipTest("The anzer console entry point is not installed in this interpreter")
+    return launcher
+
+
 class CheckCommandTests(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
@@ -332,6 +339,24 @@ class CheckCommandTests(unittest.TestCase):
 
 
 class InstalledCheckTests(unittest.TestCase):
+    def test_installed_check_reports_invalid_utf8_byte_offset(self):
+        launcher = _installed_launcher(self)
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            source = directory / "invalid-utf8.anzer"
+            original = b"caf\xc3\xa9\xff"
+            source.write_bytes(original)
+            result = subprocess.run(
+                [str(launcher), "check", source.name], cwd=directory,
+                capture_output=True, timeout=10,
+            )
+            self.assertEqual((result.returncode, result.stdout), (1, b""), result.stderr)
+            self.assertEqual(result.stderr.splitlines(), [
+                b"invalid-utf8.anzer: error[lexical/SOURCE_ENCODING]: Invalid UTF-8 at byte offset 5",
+            ])
+            self.assertEqual(source.read_bytes(), original)
+            self.assertEqual(set(directory.iterdir()), {source})
+
     @unittest.skipUnless(os.name == "nt", "Requires native Windows filesystem paths")
     def test_installed_check_of_long_source(self):
         launcher = Path(sysconfig.get_path("scripts")) / "anzer.exe"

@@ -12,6 +12,7 @@ import unittest
 from unittest.mock import mock_open, patch
 
 from anzer import cli
+from anzer.cli_files import valid_windows_path
 from anzer.compiler import AnalysisResult, analyze_source
 from anzer.diagnostics import Diagnostic, DiagnosticCategory
 from anzer.lexer import Lexer
@@ -53,8 +54,8 @@ class CheckCommandTests(unittest.TestCase):
 
     def test_root_and_check_help(self):
         for args, expected in (
-            (("-h",), "usage: anzer [-h] {check} ..."),
-            (("--help",), "usage: anzer [-h] {check} ..."),
+            (("-h",), "usage: anzer [-h] {check,compile} ..."),
+            (("--help",), "usage: anzer [-h] {check,compile} ..."),
             (("check", "-h"), "usage: anzer check [-h] INPUT.anzer"),
             (("check", "--help"), "usage: anzer check [-h] INPUT.anzer"),
         ):
@@ -62,14 +63,14 @@ class CheckCommandTests(unittest.TestCase):
                 status, stdout, stderr = _invoke(*args)
                 self.assertEqual((status, stderr), (0, ""))
                 self.assertIn(expected, stdout)
-                self.assertNotIn("compile", stdout)
+                if args[0] == "check":
+                    self.assertNotIn("compile", stdout)
                 read.assert_not_called()
 
     def test_usage_errors_precede_file_loading(self):
         for args in (
             (),
             ("unknown",),
-            ("compile", "page.anzer"),
             ("check",),
             ("check", "one.anzer", "two.anzer"),
             ("check", "page.anzer", "--unknown"),
@@ -93,7 +94,7 @@ class CheckCommandTests(unittest.TestCase):
         self.assertIn(r"--extra\noption", stderr)
 
     def test_option_terminator_accepts_dash_prefixed_input(self):
-        with patch.object(cli, "_read_source", return_value=_VALID.encode()) as read:
+        with patch.object(cli, "_read_source", return_value=(_VALID.encode(), None)) as read:
             self.assertEqual(_invoke("check", "--", "-page.anzer"), (0, "", ""))
         read.assert_called_once_with("-page.anzer")
 
@@ -145,7 +146,7 @@ class CheckCommandTests(unittest.TestCase):
         name = "page\u2028file.anzer"
         diagnostic = Diagnostic(DiagnosticCategory.LEXICAL, "first\nnext\x1b")
         with (
-            patch.object(cli, "_read_source", return_value=b""),
+            patch.object(cli, "_read_source", return_value=(b"", None)),
             patch.object(cli, "analyze_source") as analyze,
         ):
             analyze.side_effect = lambda source: AnalysisResult(
@@ -253,7 +254,7 @@ class CheckCommandTests(unittest.TestCase):
         )
         for path in valid + invalid:
             with self.subTest(path=path):
-                self.assertEqual(cli._valid_windows_path(path), path in valid)
+                self.assertEqual(valid_windows_path(path), path in valid)
 
 
 class InstalledCheckTests(unittest.TestCase):

@@ -16,6 +16,10 @@ class Parser:
     def _current(self):
         return self.tokens[min(self.index, len(self.tokens)-1)]
 
+    def _at_punctuation(self, *values: str) -> bool:
+        token = self._current()
+        return token.kind == TokenKind.PUNCTUATION and token.value in values
+
     def _advance(self):
         t=self._current()
         if t.kind != TokenKind.EOF: self.index += 1
@@ -99,7 +103,7 @@ class Parser:
                 self._recover_statement()
                 return None
             self._advance()
-            if self._current().value!="=":
+            if not self._at_punctuation("="):
                 self._error("Expected '=' after 'html'",self._current(),"PARHTML002")
                 self._recover_statement()
                 return None
@@ -110,7 +114,7 @@ class Parser:
                 self._recover_statement()
                 return None
             self._advance()
-            if self._current().value!=";":
+            if not self._at_punctuation(";"):
                 self._error("Expected ';' after HTML embedding",self._current(),"PARHTML004")
                 self._recover_statement()
                 return None
@@ -134,7 +138,7 @@ class Parser:
                 self._recover_statement()
                 return None
             self._advance()
-            if self._current().value!=":":
+            if not self._at_punctuation(":"):
                 self._error("Expected ':' after style identifier",self._current(),"PARSTYLE002")
                 self._recover_statement()
                 return None
@@ -142,7 +146,7 @@ class Parser:
             props,style_reference=self._parse_properties()
             if style_reference is not None:
                 self._error("Style declarations cannot reference another style",style_number,"PARSTYLE004")
-            if self._current().value!=";":
+            if not self._at_punctuation(";"):
                 self._error("Expected ';' after style declaration",self._current(),"PARSTYLE003")
                 self._recover_statement()
                 return None
@@ -152,23 +156,23 @@ class Parser:
             return StyleDeclaration(style_name,name,tuple(props),self._span(begin.location.offset,close.location.offset+1))
         props=[]
         style_reference=None
-        if self._current().value==":":
+        if self._at_punctuation(":"):
             self._advance()
             props,style_reference=self._parse_properties()
-        if self._current().value=="{":
+        if self._at_punctuation("{"):
             open_tok=self._advance()
             children=[]
-            while self._current().kind!=TokenKind.EOF and self._current().value!="}":
+            while self._current().kind!=TokenKind.EOF and not self._at_punctuation("}"):
                 if self._current().kind==TokenKind.MARKER:
                     self._error("Unexpected marker inside container",self._current(),"PARDECL004"); self._advance(); continue
                 child=self._parse_declaration()
                 if child: children.append(child)
-            if self._current().value=="}":
+            if self._at_punctuation("}"):
                 close=self._advance()
                 return ElementDeclaration(name,tuple(props),tuple(children),style_reference,self._span(begin.location.offset,close.location.offset+1))
             self._error("Unclosed container",open_tok,"PARDECL005")
             return ElementDeclaration(name,tuple(props),tuple(children),style_reference,self._span(begin.location.offset,self._current().location.offset))
-        if self._current().value==";":
+        if self._at_punctuation(";"):
             close=self._advance()
             return ElementDeclaration(name,tuple(props),None,style_reference,self._span(begin.location.offset,close.location.offset+1))
         self._error("Expected ';' or '{' after declaration",self._current(),"PARDECL006")
@@ -179,7 +183,7 @@ class Parser:
         props=[]
         style_reference=None
         seen_names=set()
-        while self._current().kind!=TokenKind.EOF and self._current().value not in (";","{","}"):
+        while self._current().kind!=TokenKind.EOF and not self._at_punctuation(";", "{", "}"):
             name_start=self._current()
             if name_start.kind!=TokenKind.IDENTIFIER:
                 self._error("Expected property name",name_start,"PARPROP001")
@@ -190,12 +194,12 @@ class Parser:
             # Friendly multi-word property names are recognized by collecting
             # identifier tokens up to the equals sign. Whitespace is lexical
             # formatting, so both "minimum width" and "minimum-width" work.
-            while self._current().kind==TokenKind.IDENTIFIER and self._current().value!="=":
+            while self._current().kind==TokenKind.IDENTIFIER:
                 name_tokens.append(self._advance())
             raw_name=" ".join(token.value for token in name_tokens)
             name=canonical_property_name(raw_name)
             is_style_reference=(raw_name=="use style")
-            if self._current().value!="=":
+            if not self._at_punctuation("="):
                 self._error("Expected '=' after property name",self._current(),"PARPROP002")
                 self._recover_property()
                 continue
@@ -226,20 +230,20 @@ class Parser:
             else:
                 seen_names.add(name)
                 props.append(PropertyAssignment(name,value,self._span(name_start.location.offset,self._token_end_offset(value_tok))))
-            if self._current().value==",":
+            if self._at_punctuation(","):
                 self._advance()
-            elif self._current().value not in (";","{","}"):
+            elif not self._at_punctuation(";", "{", "}"):
                 self._error("Expected ',' between properties",self._current(),"PARPROP004")
                 self._recover_property()
         return props,style_reference
 
 
     def _recover_property(self):
-        while self._current().kind!=TokenKind.EOF and self._current().value not in (",",";","{","}"):
+        while self._current().kind!=TokenKind.EOF and not self._at_punctuation(",", ";", "{", "}"):
             self._advance()
-        if self._current().value==",": self._advance()
+        if self._at_punctuation(","): self._advance()
 
     def _recover_statement(self):
-        while self._current().kind!=TokenKind.EOF and self._current().value not in (";","}"):
+        while self._current().kind!=TokenKind.EOF and not self._at_punctuation(";", "}"):
             self._advance()
-        if self._current().value==";": self._advance()
+        if self._at_punctuation(";"): self._advance()

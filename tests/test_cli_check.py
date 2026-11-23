@@ -1,6 +1,7 @@
 from contextlib import redirect_stderr, redirect_stdout
 import errno
 from io import StringIO
+import ntpath
 import os
 from pathlib import Path
 import stat
@@ -94,9 +95,13 @@ class CheckCommandTests(unittest.TestCase):
         self.assertIn(r"--extra\noption", stderr)
 
     def test_option_terminator_accepts_dash_prefixed_input(self):
-        with patch.object(cli, "_read_source", return_value=(_VALID.encode(), None)) as read:
+        with (
+            patch.object(cli, "filesystem_path", return_value="native-path") as convert,
+            patch.object(cli, "_read_source", return_value=(_VALID.encode(), None)) as read,
+        ):
             self.assertEqual(_invoke("check", "--", "-page.anzer"), (0, "", ""))
-        read.assert_called_once_with("-page.anzer")
+        convert.assert_called_once_with("-page.anzer")
+        read.assert_called_once_with("native-path")
 
     def test_success_accepts_known_compiler_examples_without_output(self):
         examples = (
@@ -193,6 +198,61 @@ class CheckCommandTests(unittest.TestCase):
             directory, 2, ": error[input/INPUT_PATH]: Expected a regular .anzer source file"
         )
 
+    def test_rejects_invalid_supplied_final_component_before_reading(self):
+        source = self.write_source()
+        parent = self.directory / "folder.anzer"
+        parent.mkdir()
+        path = parent / "page"
+        path.write_bytes(_VALID.encode())
+        names = [f"{source}/.", f"{source}/..", f"{source}/", str(path)]
+        if os.name == "nt":
+            names.extend((f"{source}\\.", f"{source}\\..", f"{source}\\"))
+        with (
+            patch.object(cli, "filesystem_path") as convert,
+            patch.object(cli, "_read_source") as read,
+        ):
+            for name in names:
+                with self.subTest(name=name):
+                    self.assert_diagnostics(
+                        name, 2, ": error[input/INPUT_PATH]: Expected a valid .anzer source path"
+                    )
+            convert.assert_not_called()
+            read.assert_not_called()
+        self.assertEqual(source.read_bytes(), _VALID.encode())
+        self.assertEqual(path.read_bytes(), _VALID.encode())
+        self.assertEqual(set(self.directory.iterdir()), {source, parent})
+        self.assertEqual(list(parent.iterdir()), [path])
+
+    def test_windows_drive_unc_and_mixed_separator_suffixes(self):
+        with (
+            patch.object(os, "name", "nt"),
+            patch.object(os, "path", ntpath),
+            patch.object(cli, "filesystem_path", return_value="native-path") as convert,
+            patch.object(cli, "_read_source", return_value=(_VALID.encode(), None)) as read,
+        ):
+            for supplied in (
+                r"C:\docs/./parent\../page.en.ANZER",
+                r"\\server\share\docs/./page.aNzEr",
+                r".\docs/../page.anzer",
+            ):
+                with self.subTest(supplied=supplied):
+                    self.assertEqual(_invoke("check", supplied), (0, "", ""))
+                    convert.assert_called_once_with(supplied)
+                    read.assert_called_once_with("native-path")
+                    convert.reset_mock()
+                    read.reset_mock()
+            for supplied in (
+                r"C:\docs/page.anzer\.",
+                r"\\server\share\docs/page.anzer/.",
+                r"\\server\share.anzer",
+            ):
+                with self.subTest(supplied=supplied):
+                    self.assert_diagnostics(
+                        supplied, 2, ": error[input/INPUT_PATH]: Expected a valid .anzer source path"
+                    )
+            convert.assert_not_called()
+            read.assert_not_called()
+
     @unittest.skipUnless(hasattr(os, "mkfifo"), "The host does not provide named FIFOs")
     def test_special_file_is_rejected_before_open(self):
         path = self.directory / "pipe.anzer"
@@ -250,14 +310,60 @@ class CheckCommandTests(unittest.TestCase):
             r"C:page.anzer", r"\page.anzer", r"\\.\C:\page.anzer", r"\\?\C:\page.anzer",
             r"\\?\UNC\server\share\page.anzer", "page.anzer:stream", r"\\server\share:stream\page.anzer",
             r"directory.\page.anzer", r"directory \page.anzer", "NUL.anzer", "COM\u00b9.anzer",
-            "CON .anzer", r"pages\LPT9\page.anzer",
+            "CON .anzer", r"pages\LPT9\page.anzer", r"bad?\..\page.anzer",
+            r"\\server\\share\page.anzer", r"\\server\..\page.anzer", "1:/page.anzer",
         )
         for path in valid + invalid:
             with self.subTest(path=path):
                 self.assertEqual(valid_windows_path(path), path in valid)
 
+    @unittest.skipUnless(os.name == "nt", "Requires Windows input path rules")
+    def test_rejected_windows_input_does_not_reach_path_conversion(self):
+        for name in (
+            r"C:page.anzer", r"\page.anzer", r"\\?\C:\page.anzer", r"\\.\C:\page.anzer",
+            r"NUL\..\page.anzer", r"bad?\..\page.anzer", r"bad.\..\page.anzer",
+            r"bad \..\page.anzer", r"source:stream.anzer",
+        ):
+            with self.subTest(name=name), patch.object(cli, "filesystem_path") as convert:
+                self.assert_diagnostics(
+                    name, 2, ": error[input/INPUT_PATH]: Expected a valid .anzer source path"
+                )
+                convert.assert_not_called()
+
 
 class InstalledCheckTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == "nt", "Requires native Windows filesystem paths")
+    def test_installed_check_of_long_source(self):
+        launcher = Path(sysconfig.get_path("scripts")) / "anzer.exe"
+        if not launcher.is_file():
+            self.skipTest("The anzer console entry point is not installed in this interpreter")
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            name = "s" * 210 + " caf\u00e9 page.anzer"
+            source = directory / ("directory " + "d" * 40) / name
+            self.assertGreater(len(str(source)), 260)
+            source.parent.mkdir()
+            native_source = Path("\\\\?\\" + str(source))
+            original = _VALID.replace("\n", "\r\n").encode("utf-8")
+            native_source.write_bytes(original)
+            try:
+                result = subprocess.run(
+                    [str(launcher), "check", str(source)], cwd=directory,
+                    capture_output=True, timeout=10,
+                )
+                self.assertEqual((result.returncode, result.stdout, result.stderr), (0, b"", b""))
+                self.assertEqual(native_source.read_bytes(), original)
+                self.assertEqual(os.listdir(native_source.parent), [name])
+                with patch("anzer.cli.open", create=True, side_effect=PermissionError(errno.EACCES, "denied")):
+                    status, stdout, stderr = _invoke("check", str(source))
+                self.assertEqual((status, stdout), (2, ""))
+                self.assertTrue(stderr.startswith(f"{source}: error[input/INPUT_PERMISSION]:"))
+            finally:
+                native_source.unlink()
+            status, stdout, stderr = _invoke("check", str(source))
+            self.assertEqual((status, stdout), (2, ""))
+            self.assertTrue(stderr.startswith(f"{source}: error[input/INPUT_NOT_FOUND]:"))
+
     def test_installed_console_script_exit_statuses_and_streams(self):
         launcher = Path(sysconfig.get_path("scripts")) / ("anzer.exe" if os.name == "nt" else "anzer")
         if not launcher.is_file():

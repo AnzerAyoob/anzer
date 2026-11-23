@@ -1,6 +1,7 @@
 import errno
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sysconfig
 import tempfile
@@ -84,6 +85,48 @@ class CompileCommandTests(unittest.TestCase):
         self.assertNotIn(b"\r\n", expected)
         self.assertEqual(self.source.read_bytes(), original)
         self.assertEqual(set(self.directory.iterdir()), {self.source, default, explicit})
+
+    def test_default_output_replaces_only_supplied_final_suffix(self):
+        navigation = self.directory / "navigation"
+        navigation.mkdir()
+        original = _PLAIN.encode("utf-8")
+        expected = render_document(_normalized(_PLAIN)).encode("utf-8")
+        for filename, output_name in (
+            ("page.anzer", "page.html"),
+            ("upper.ANZER", "upper.html"),
+            ("page.en.aNzEr", "page.en.html"),
+        ):
+            with self.subTest(filename=filename):
+                source = self.directory / filename
+                source.write_bytes(original)
+                supplied = f"{navigation}{os.sep}./../{filename}"
+                before = set(self.directory.iterdir())
+                self.assertEqual(_invoke("compile", supplied), (0, "", ""))
+                output = self.directory / output_name
+                self.assertEqual(output.read_bytes(), expected)
+                self.assertEqual(source.read_bytes(), original)
+                self.assertEqual(set(self.directory.iterdir()), before | {output})
+                self.assertEqual(list(navigation.iterdir()), [])
+
+    def test_invalid_final_component_does_not_reach_source_read_or_publication(self):
+        original = self.source.read_bytes()
+        names = [f"{self.source}/.", f"{self.source}/..", f"{self.source}/"]
+        if os.name == "nt":
+            names.extend((f"{self.source}\\.", f"{self.source}\\..", f"{self.source}\\"))
+        with (
+            patch.object(cli, "_read_source") as read,
+            patch.object(cli, "publish_output") as publish,
+        ):
+            for name in names:
+                with self.subTest(name=name):
+                    self.assertEqual(
+                        _invoke("compile", name),
+                        (2, "", f"{name}: error[input/INPUT_PATH]: Expected a valid .anzer source path\n"),
+                    )
+            read.assert_not_called()
+            publish.assert_not_called()
+        self.assertEqual(self.source.read_bytes(), original)
+        self.assertEqual(list(self.directory.iterdir()), [self.source])
 
     def test_default_output_uses_source_symlink_name(self):
         link = self.directory / "alias.anzer"
@@ -284,3 +327,60 @@ class CompileCommandTests(unittest.TestCase):
         self.assertEqual((bad.returncode, bad.stdout), (1, b""))
         self.assertIn(b"error[syntax/PARDECL002]", bad.stderr)
         self.assertFalse((work / "failed.html").exists())
+
+    @unittest.skipUnless(os.name == "nt", "Requires native Windows filesystem paths")
+    def test_installed_launcher_publishes_original_305_character_destination(self):
+        launcher = Path(sysconfig.get_path("scripts")) / "anzer.exe"
+        if not launcher.is_file():
+            self.skipTest("The anzer console entry point is not installed in this interpreter")
+        parent_length = 79 - len(str(self.directory)) - 1
+        if parent_length < 1:
+            self.skipTest("The temp directory is too long for the exact 305-character fixture")
+        parent = self.directory / ("d" * parent_length)
+        parent.mkdir()
+        target = parent / ("o" * 220 + ".html")
+        self.assertEqual((len(str(target)), len(target.name)), (305, 225))
+        native_target = Path("\\\\?\\" + str(target))
+        self.addCleanup(native_target.unlink, missing_ok=True)
+        original = self.source.read_bytes()
+        expected = render_document(_normalized(_PLAIN)).encode("utf-8")
+        for output, cwd in ((str(target), self.directory), (target.name, parent)):
+            with self.subTest(output=output):
+                args = [str(launcher), "compile", str(self.source), "-o", output]
+                compiled = subprocess.run(args, cwd=cwd, capture_output=True, timeout=10)
+                self.assertEqual((compiled.returncode, compiled.stdout, compiled.stderr), (0, b"", b""))
+                repeated = subprocess.run(args, cwd=cwd, capture_output=True, timeout=10)
+                self.assertEqual((repeated.returncode, repeated.stdout), (2, b""))
+                self.assertTrue(repeated.stderr.startswith(
+                    f"{output}: error[output/OUTPUT_EXISTS]: ".encode()
+                ))
+                self.assertEqual(native_target.read_bytes(), expected)
+                self.assertEqual(self.source.read_bytes(), original)
+                self.assertEqual(os.listdir(native_target.parent), [target.name])
+                native_target.unlink()
+
+    @unittest.skipUnless(os.name == "nt", "Requires native Windows filesystem paths")
+    def test_compile_long_source_defaults_beside_source_in_deep_parent(self):
+        shallow = self.directory / ("d" * 180)
+        shallow.mkdir()
+        parent = shallow / ("p" * 60)
+        native_parent = Path("\\\\?\\" + str(parent))
+        native_parent.mkdir()
+        self.addCleanup(shutil.rmtree, native_parent)
+        self.assertGreater(len(str(parent)), 260)
+        name = "caf\u00e9 long source.ANZER"
+        original = _PLAIN.encode("utf-8")
+        (native_parent / name).write_bytes(original)
+        supplied = shallow / "navigation" / ".." / parent.name / name
+        self.assertEqual(_invoke("compile", str(supplied)), (0, "", ""))
+        self.assertEqual(
+            (native_parent / "caf\u00e9 long source.html").read_bytes(),
+            render_document(_normalized(_PLAIN)).encode("utf-8"),
+        )
+        self.assertEqual((native_parent / name).read_bytes(), original)
+        self.assertEqual(set(os.listdir(native_parent)), {name, "caf\u00e9 long source.html"})
+        missing = parent / "missing" / "page.html"
+        self.assertEqual(
+            _invoke("compile", str(supplied), "-o", str(missing)),
+            (2, "", f"{missing}: error[output/OUTPUT_PARENT]: Could not access output directory\n"),
+        )

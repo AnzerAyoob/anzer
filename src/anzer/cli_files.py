@@ -2,8 +2,8 @@
 
 from collections.abc import Callable
 import errno
+import ntpath
 import os
-from pathlib import PureWindowsPath
 import stat
 import tempfile
 
@@ -14,6 +14,8 @@ _WINDOWS_DEVICES = {"CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"} | {
 _UNSUPPORTED_LINK_ERRORS = {errno.ENOSYS, errno.ENOTSUP, errno.EOPNOTSUPP, errno.EXDEV}
 # Invalid function, not supported, and call not implemented.
 _UNSUPPORTED_LINK_WINERRORS = {1, 50, 120}
+_WINDOWS_EXTENDED = "\\\\?\\"
+_WINDOWS_EXTENDED_UNC = _WINDOWS_EXTENDED + "UNC\\"
 
 
 class OutputError(Exception):
@@ -23,23 +25,57 @@ class OutputError(Exception):
 
 
 def valid_windows_path(name: str) -> bool:
-    if name.replace("/", "\\").startswith(("\\\\?\\", "\\\\.\\")):
+    name = name.replace("/", "\\")
+    if name.startswith((_WINDOWS_EXTENDED, "\\\\.\\")) or name.endswith("\\"):
         return False
-    path = PureWindowsPath(name)
-    if bool(path.drive) != bool(path.root):
+    drive, tail = ntpath.splitdrive(name)
+    if bool(drive) != tail.startswith("\\"):
         return False
-    if path.drive.startswith("\\\\") and ":" in path.drive:
+    unc = drive.startswith("\\\\")
+    if unc:
+        anchor = drive[2:].split("\\")
+        if len(anchor) != 2 or any(part in {"", ".", ".."} for part in anchor):
+            return False
+    elif drive and not (drive[0].isascii() and drive[0].isalpha()):
+        return False
+    if any(char in '<>:"|?*' or ord(char) < 32 for char in drive[2:] + tail):
         return False
 
-    # Exclude the drive or UNC anchor from ordinary filename rules.
-    components = path.parts[1:] if path.anchor else path.parts
-    for part in components:
-        if part in {".", ".."}:
+    # Check supplied components before normalization can remove any of them.
+    for part in tail.split("\\"):
+        if part in {"", ".", ".."}:
             continue
         device = part.partition(".")[0].rstrip(" ").upper()
-        if ":" in part or part.endswith((" ", ".")) or device in _WINDOWS_DEVICES:
+        if part.endswith((" ", ".")) or device in _WINDOWS_DEVICES:
             return False
     return True
+
+
+def filesystem_path(path: str) -> str:
+    """Convert a validated CLI path to a native filesystem operand."""
+    if os.name != "nt":
+        return path
+    absolute = ntpath.normpath(ntpath.abspath(path))
+    # A relative path can inherit an extended spelling from the working directory.
+    if absolute.startswith(_WINDOWS_EXTENDED):
+        return absolute
+    if absolute.startswith("\\\\"):
+        return _WINDOWS_EXTENDED_UNC + absolute[2:]
+    return _WINDOWS_EXTENDED + absolute
+
+
+def _staging_display_path(staging: str) -> str:
+    if os.name != "nt":
+        return staging
+    if staging.startswith(_WINDOWS_EXTENDED_UNC):
+        ordinary = "\\\\" + staging[len(_WINDOWS_EXTENDED_UNC):]
+    else:
+        ordinary = staging.removeprefix(_WINDOWS_EXTENDED)
+    # Keep the extended spelling if the leftover needs it to be accessible.
+    units = len(ordinary.encode("utf-16-le", errors="surrogatepass")) // 2
+    if units < 260 and ntpath.isabs(ordinary) and valid_windows_path(ordinary):
+        return ordinary
+    return staging
 
 
 def _same_file(first: os.stat_result, second: os.stat_result) -> bool:
@@ -119,15 +155,17 @@ def _conflict(
     return OutputError("OUTPUT_EXISTS", "Output destination already exists")
 
 
-def _validate_destination(destination: str, source: os.stat_result) -> tuple[str, str]:
-    parent, name = os.path.split(destination)
+def _validate_destination(destination: str, source: os.stat_result) -> tuple[str, str, str]:
+    name = os.path.basename(destination)
     if (
         name in {"", ".", ".."} or "\0" in destination
         or (os.name == "nt" and not valid_windows_path(destination))
     ):
         raise OutputError("OUTPUT_PATH", "Expected a valid output path")
-    parent = parent or "."
     try:
+        destination = filesystem_path(destination)
+        parent, name = os.path.split(destination)
+        parent = parent or "."
         parent_info = os.stat(parent)
     except PermissionError:
         raise OutputError("OUTPUT_PERMISSION", "Permission denied accessing output directory") from None
@@ -146,7 +184,7 @@ def _validate_destination(destination: str, source: os.stat_result) -> tuple[str
         raise OutputError("OUTPUT_PUBLISH", "Could not inspect output destination") from None
     if entry is not None:
         raise _conflict(destination, entry, source)
-    return parent, name
+    return destination, parent, name
 
 
 def _write_staging(fd: int, data: bytes) -> os.stat_result:
@@ -202,7 +240,7 @@ def publish_output(
     cleanup_failed: Callable[[str], None],
 ) -> None:
     """Publish finished bytes and report any staging name left after cleanup."""
-    parent, name = _validate_destination(destination, source)
+    destination, parent, name = _validate_destination(destination, source)
     # Keep the staging name distinct even on a case-insensitive volume.
     # A different initial letter also separates Windows short aliases.
     prefix = "z-anzer-" if name.casefold().startswith("a") else "anzer-"
@@ -223,4 +261,4 @@ def publish_output(
             except FileNotFoundError:
                 pass
             except OSError:
-                cleanup_failed(staging)
+                cleanup_failed(_staging_display_path(staging))

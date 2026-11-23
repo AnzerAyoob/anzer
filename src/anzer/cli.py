@@ -4,12 +4,11 @@ import argparse
 from collections.abc import Sequence
 import errno
 import os
-from pathlib import Path
 import stat
 import sys
 from unicodedata import category as unicode_category
 
-from .cli_files import OutputError, publish_output, valid_windows_path
+from .cli_files import OutputError, filesystem_path, publish_output, valid_windows_path
 from .compiler import AnalysisFailure, AnalysisResult, analyze_source
 from .normalize import NormalizedDocument, NormalizedHtml, normalize_document
 from .render import render_document
@@ -70,16 +69,17 @@ def _compiler_error(name: str, stage: str) -> int:
 
 
 def _analyze_input(name: str) -> tuple[AnalysisResult, os.stat_result] | int:
+    # Validate the supplied final component before path normalization.
     if (
         "\0" in name
         or (os.name == "nt" and not valid_windows_path(name))
-        or Path(name).suffix.lower() != ".anzer"
+        or os.path.splitext(name)[1].lower() != ".anzer"
     ):
         _report(name, "input", "INPUT_PATH", "Expected a valid .anzer source path")
         return 2
 
     try:
-        data, identity = _read_source(name)
+        data, identity = _read_source(filesystem_path(name))
     except OSError as error:
         if error.errno in _INVALID_PATH_ERRORS or getattr(error, "winerror", None) == 123:
             _report(name, "input", "INPUT_PATH", "Expected a regular .anzer source file")

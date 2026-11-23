@@ -1,6 +1,8 @@
 import errno
+import ntpath
 import os
 from pathlib import Path
+import shutil
 import stat
 import tempfile
 from types import SimpleNamespace
@@ -16,6 +18,38 @@ _HTML = b"<!doctype html>\n<html></html>\n"
 def _windows_error(error, winerror):
     error.winerror = winerror
     return error
+
+
+class FilesystemPathTests(unittest.TestCase):
+    def test_windows_drive_and_unc_spelling(self):
+        for supplied, expected in (
+            (r"D:\work\page.html", r"\\?\D:\work\page.html"),
+            ("D:/work/one/.././café page.html", r"\\?\D:\work\café page.html"),
+            (r"\\server\share\page.html", r"\\?\UNC\server\share\page.html"),
+            ("//server/share/dir/../page.html", r"\\?\UNC\server\share\page.html"),
+        ):
+            with self.subTest(supplied=supplied), patch.object(os, "name", "nt"):
+                self.assertTrue(cli_files.valid_windows_path(supplied))
+                self.assertEqual(cli_files.filesystem_path(supplied), expected)
+
+    def test_relative_windows_spelling_uses_current_directory(self):
+        supplied = r"subfolder\..\page.html"
+        with (
+            patch.object(os, "name", "nt"),
+            patch.object(ntpath, "abspath", return_value=r"D:\current\subfolder\..\page.html") as abspath,
+        ):
+            self.assertEqual(cli_files.filesystem_path(supplied), r"\\?\D:\current\page.html")
+        abspath.assert_called_once_with(supplied)
+        with (
+            patch.object(os, "name", "nt"),
+            patch.object(ntpath, "abspath", return_value=r"\\?\D:\current\..\page.html"),
+        ):
+            self.assertEqual(cli_files.filesystem_path(supplied), r"\\?\D:\page.html")
+
+    def test_posix_spelling_is_unchanged(self):
+        with patch.object(os, "name", "posix"):
+            supplied = r"../NUL /back\slash:stream?.html"
+            self.assertEqual(cli_files.filesystem_path(supplied), supplied)
 
 
 class OutputPublicationTests(unittest.TestCase):
@@ -59,7 +93,7 @@ class OutputPublicationTests(unittest.TestCase):
             fsync(fd)
 
         def observe(staged, destination):
-            self.assertEqual(Path(staged).parent, self.directory)
+            self.assertTrue(Path(staged).parent.samefile(self.directory))
             self.assertFalse(os.path.lexists(destination))
             self.assertEqual(len(descriptors), 1)
             with self.assertRaises(OSError) as closed:
@@ -99,6 +133,13 @@ class OutputPublicationTests(unittest.TestCase):
         self.assertEqual(self.output.read_bytes(), b"existing")
         self.assertEqual(list(directory.iterdir()), [])
 
+    @unittest.skipUnless(os.name == "posix", "Requires native POSIX filesystem paths")
+    def test_posix_allows_filename_characters_restricted_on_windows(self):
+        output = self.directory / "NUL\\page:output?.html "
+        self.publish(output)
+        self.assertEqual(output.read_bytes(), _HTML)
+        self.assertEqual(set(self.directory.iterdir()), {self.source, output})
+
     def test_missing_or_nondirectory_parent_is_refused(self):
         for parent in (self.directory / "missing", self.source):
             with self.subTest(parent=parent):
@@ -135,13 +176,14 @@ class OutputPublicationTests(unittest.TestCase):
                 patch.object(cli_files, "_windows_component_limit", return_value=limit) as volume,
             ):
                 self.assert_failure(expected, target)
-            volume.assert_called_once_with(str(self.directory))
+            volume.assert_called_once_with(os.path.dirname(cli_files.filesystem_path(str(target))))
             self.assertEqual(list(self.directory.iterdir()), [self.source])
             self.assertEqual(self.leftovers, [])
 
     def test_path_not_found_rechecks_the_parent_without_assuming_the_name_is_invalid(self):
         error = _windows_error(FileNotFoundError(errno.ENOENT, "path not found"), 3)
         real_stat = os.stat
+        parent_path = os.path.dirname(cli_files.filesystem_path(str(self.output)))
         for failure, expected in (
             (FileNotFoundError(errno.ENOENT, "missing"), "OUTPUT_PARENT"),
             (NotADirectoryError(errno.ENOTDIR, "not a directory"), "OUTPUT_PARENT"),
@@ -151,7 +193,7 @@ class OutputPublicationTests(unittest.TestCase):
             recheck_parent = False
 
             def parent_status(name, *args, **kwargs):
-                if recheck_parent and os.fspath(name) == str(self.directory):
+                if recheck_parent and os.fspath(name) == parent_path:
                     raise failure
                 return real_stat(name, *args, **kwargs)
 
@@ -173,23 +215,30 @@ class OutputPublicationTests(unittest.TestCase):
 
     @unittest.skipUnless(os.name == "nt", "Requires Windows path semantics")
     def test_windows_output_path_anchors_and_restrictions(self):
-        for target in (r"C:\pages\output.html", r"\\server\share\output.html"):
+        for target, native in (
+            (r"C:\pages\output.html", r"\\?\C:\pages\output.html"),
+            (r"\\server\share\output.html", r"\\?\UNC\server\share\output.html"),
+        ):
             with (
                 self.subTest(target=target),
-                patch.object(os, "stat", return_value=SimpleNamespace(st_mode=stat.S_IFDIR)),
-                patch.object(os, "lstat", side_effect=FileNotFoundError(errno.ENOENT, "missing")),
+                patch.object(os, "stat", return_value=SimpleNamespace(st_mode=stat.S_IFDIR)) as parent,
+                patch.object(os, "lstat", side_effect=FileNotFoundError(errno.ENOENT, "missing")) as entry,
             ):
                 self.assertEqual(
                     cli_files._validate_destination(target, self.identity),
-                    os.path.split(target),
+                    (native, os.path.dirname(native), "output.html"),
                 )
+                parent.assert_called_once_with(os.path.dirname(native))
+                entry.assert_called_once_with(native)
         for target in (
             r"C:output.html", r"\output.html", r"\\?\C:\output.html",
             r"\\.\C:\output.html", r"pages.\output.html", "page.html:stream",
-            "NUL.html", str(self.directory / "bad?.html"),
+            "NUL.html", str(self.directory / "bad?.html"), r"bad?\..\page.html",
+            r"pages.\..\page.html", r"pages \..\page.html", r"LPT1\..\page.html",
         ):
-            with self.subTest(target=target):
+            with self.subTest(target=target), patch.object(cli_files, "filesystem_path") as convert:
                 self.assert_failure("OUTPUT_PATH", target)
+                convert.assert_not_called()
 
     def test_parent_symlink_resolves_normally(self):
         parent = self.directory / "actual"
@@ -353,3 +402,91 @@ class OutputPublicationTests(unittest.TestCase):
             self.assert_failure("OUTPUT_PUBLISH")
         self.assertTrue(self.output.is_symlink())
         self.assertFalse(self.output.exists())
+
+    def make_long_parent(self):
+        parent = self.directory / ("p" * 180) / ("q" * 60)
+        self.assertGreater(len(str(parent)), 260)
+        native = Path("\\\\?\\" + str(parent))
+        native.mkdir(parents=True)
+        self.addCleanup(shutil.rmtree, native)
+        return parent, native
+
+    @unittest.skipUnless(os.name == "nt", "Requires native Windows filesystem paths")
+    def test_long_existing_entries_and_source_aliases_are_preserved(self):
+        parent, native = self.make_long_parent()
+        (native / "existing.html").write_bytes(b"existing")
+        (native / "directory").mkdir()
+        (native / "directory" / "keep").write_bytes(b"keep")
+        os.link(self.source, native / "alias.html")
+        self.symlink(native / "symlink.html", self.source)
+        self.symlink(native / "dangling.html", self.directory / "missing")
+        cases = [
+            ("existing.html", "OUTPUT_EXISTS"),
+            ("directory", "OUTPUT_EXISTS"),
+            ("alias.html", "OUTPUT_COLLISION"),
+            ("symlink.html", "OUTPUT_COLLISION"),
+            ("dangling.html", "OUTPUT_EXISTS"),
+        ]
+        if (native / "ALIAS.HTML").exists():
+            cases.append(("ALIAS.HTML", "OUTPUT_COLLISION"))
+        with patch.object(tempfile, "mkstemp") as stage:
+            for name, code in cases:
+                with self.subTest(name=name):
+                    self.assert_failure(code, parent / name)
+            stage.assert_not_called()
+        self.assertEqual((native / "existing.html").read_bytes(), b"existing")
+        self.assertEqual((native / "directory" / "keep").read_bytes(), b"keep")
+        self.assertTrue((native / "alias.html").samefile(self.source))
+        self.assertTrue((native / "symlink.html").is_symlink())
+        self.assertTrue((native / "symlink.html").samefile(self.source))
+        self.assertTrue((native / "dangling.html").is_symlink())
+        self.assertFalse((native / "dangling.html").exists())
+
+    @unittest.skipUnless(os.name == "nt", "Requires native Windows filesystem paths")
+    def test_long_link_outcomes_and_cleanup(self):
+        parent, native = self.make_long_parent()
+        destination = parent / "output.html"
+        final = native / destination.name
+        real_link = os.link
+
+        def complete_then_error(staging, output):
+            self.assertTrue(staging.startswith("\\\\?\\"))
+            self.assertGreater(len(staging) - 4, 260)
+            self.assertEqual(Path(staging).parent, native)
+            self.assertEqual(Path(output), final)
+            self.assertEqual(Path(staging).read_bytes(), _HTML)
+            real_link(staging, output)
+            raise OSError(errno.EIO, "ambiguous")
+
+        with patch.object(os, "link", side_effect=complete_then_error):
+            self.publish(destination)
+        self.assertEqual(final.read_bytes(), _HTML)
+        final.unlink()
+
+        def concurrent_creation(staging, output):
+            final.write_bytes(b"competitor")
+            real_link(staging, output)
+
+        with patch.object(os, "link", side_effect=concurrent_creation):
+            self.assert_failure("OUTPUT_EXISTS", destination)
+        self.assertEqual(final.read_bytes(), b"competitor")
+        final.unlink()
+
+        for error, code in (
+            (PermissionError(errno.EACCES, "denied"), "OUTPUT_PERMISSION"),
+            (_windows_error(OSError(errno.EINVAL, "unsupported"), 50), "OUTPUT_ATOMIC_UNSUPPORTED"),
+            (OSError(errno.EIO, "ambiguous"), "OUTPUT_PUBLISH"),
+        ):
+            with self.subTest(code=code), patch.object(os, "link", side_effect=error):
+                self.assert_failure(code, destination)
+            self.assertEqual(os.listdir(native), [])
+        self.assertEqual(self.leftovers, [])
+
+        with patch.object(os, "unlink", side_effect=PermissionError(errno.EACCES, "denied")):
+            self.publish(destination)
+        leftover, = self.leftovers
+        self.assertTrue(leftover.startswith("\\\\?\\"))
+        self.assertEqual(set(native.iterdir()), {Path(leftover), final})
+        self.assertEqual(final.read_bytes(), _HTML)
+        Path(leftover).unlink()
+        self.assertEqual(self.source.read_bytes(), b"source contents")

@@ -40,11 +40,12 @@ class FilesystemPathTests(unittest.TestCase):
         ):
             self.assertEqual(cli_files.filesystem_path(supplied), r"\\?\D:\current\page.html")
         abspath.assert_called_once_with(supplied)
+        # Win32 resolves navigation while qualifying the relative path.
         with (
             patch.object(os, "name", "nt"),
-            patch.object(ntpath, "abspath", return_value=r"\\?\D:\current\..\page.html"),
+            patch.object(ntpath, "abspath", return_value=r"\\?\D:\current\page.html"),
         ):
-            self.assertEqual(cli_files.filesystem_path(supplied), r"\\?\D:\page.html")
+            self.assertEqual(cli_files.filesystem_path(supplied), r"\\?\D:\current\page.html")
 
     def test_posix_spelling_is_unchanged(self):
         with patch.object(os, "name", "posix"):

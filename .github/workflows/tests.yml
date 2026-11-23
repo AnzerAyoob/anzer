@@ -15,15 +15,120 @@ permissions:
 
 jobs:
   tests:
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+        python: ["3.10", "3.12"]
+    env:
+      EXPECTED_PYTHON: ${{ matrix.python }}
+      REQUIRE_BROWSER: ${{ matrix.os == 'ubuntu-24.04' && matrix.python == '3.12' && '1' || '0' }}
+      PYTHONDONTWRITEBYTECODE: "1"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
-      - name: Install package
-        run: python -m pip install --upgrade pip && pip install -e .
+          python-version: ${{ matrix.python }}
+      - name: Set up Node for browser tests
+        if: env.REQUIRE_BROWSER == '1'
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Install and verify package and launcher
+        shell: python
+        run: |
+          from pathlib import Path
+          import os
+          import shutil
+          import subprocess
+          import sys
+          from tempfile import TemporaryDirectory
+
+          print(sys.version, sys.executable, flush=True)
+          actual_minor = f"{sys.version_info.major}.{sys.version_info.minor}"
+          if actual_minor != os.environ["EXPECTED_PYTHON"]:
+              raise SystemExit(f"Unexpected Python version: {actual_minor}")
+
+          checkout = Path.cwd()
+          with TemporaryDirectory(prefix="anzer-ci-") as temporary:
+              root = Path(temporary)
+              package = root / "package"
+              package.mkdir()
+              shutil.copy2(checkout / "pyproject.toml", package)
+              shutil.copytree(checkout / "src", package / "src")
+              pip = [sys.executable, "-I", "-m", "pip"]
+              subprocess.run([*pip, "install", "."], cwd=package, check=True, timeout=180)
+              subprocess.run([*pip, "check"], cwd=root, check=True, timeout=30)
+              verify = """
+          from importlib.metadata import distribution
+          from pathlib import Path
+          import anzer
+          import os
+          import subprocess
+          import sysconfig
+
+          dist = distribution("anzer")
+          if (dist.metadata["Name"], dist.version, dist.metadata["Requires-Python"]) != (
+              "anzer", "0.1.0", ">=3.10"
+          ):
+              raise SystemExit("Unexpected installed Anzer metadata")
+          entry, = (
+              item for item in dist.entry_points
+              if item.group == "console_scripts" and item.name == "anzer"
+          )
+          if entry.value != "anzer.cli:main" or not callable(entry.load()):
+              raise SystemExit("Unexpected Anzer console entry point")
+          installed_files = {Path(dist.locate_file(item)).resolve() for item in dist.files or ()}
+          if Path(anzer.__file__).resolve() not in installed_files:
+              raise SystemExit("Anzer import did not come from the installed package")
+          launcher = Path(sysconfig.get_path("scripts")) / ("anzer.exe" if os.name == "nt" else "anzer")
+          if not launcher.is_file() or launcher.resolve() not in installed_files:
+              raise SystemExit("Anzer launcher is missing from the selected Python installation")
+          help_result = subprocess.run(
+              [str(launcher), "--help"], capture_output=True, check=True, timeout=15,
+          )
+          if not help_result.stdout.startswith(b"usage: anzer ") or help_result.stderr:
+              raise SystemExit("Unexpected output from the Anzer launcher")
+          print(f"Verified anzer {dist.version}, import {anzer.__file__}, launcher {launcher}")
+          """
+              subprocess.run([sys.executable, "-I", "-c", verify], cwd=root, check=True, timeout=30)
       - name: Run test suite
-        run: python -m unittest discover -s tests -v
+        shell: python
+        run: |
+          from pathlib import Path
+          import os
+          import shutil
+          import subprocess
+          import unittest
+
+          loader = unittest.TestLoader()
+          require_browser = os.environ["REQUIRE_BROWSER"] == "1"
+          if require_browser:
+              browser_suite = loader.discover("tests", pattern="test_toggle_runtime.py")
+              if browser_suite.countTestCases() < 6:
+                  raise SystemExit("Expected at least six browser runtime cases")
+              from test_toggle_runtime import _find_browser
+
+              browser = _find_browser()
+              node = shutil.which("node")
+              bridge = Path("tests/run_browser.cjs")
+              if not browser or not node or not bridge.is_file():
+                  raise SystemExit("Required browser, Node.js, or browser bridge is missing")
+              websocket = subprocess.check_output([node, "-p", "typeof WebSocket"], timeout=10)
+              if websocket.strip() != b"function":
+                  raise SystemExit("Required browser tests need Node's built-in WebSocket")
+              print(f"Browser executable: {browser}", flush=True)
+              subprocess.run([node, "--version"], check=True, timeout=10)
+              subprocess.run([node, "--check", str(bridge)], check=True, timeout=10)
+
+          result = unittest.TextTestRunner(verbosity=2).run(loader.discover("tests"))
+          if not result.wasSuccessful():
+              raise SystemExit(1)
+          if require_browser and any("test_toggle_runtime." in str(test) for test, _ in result.skipped):
+              raise SystemExit("A required browser runtime case was skipped")

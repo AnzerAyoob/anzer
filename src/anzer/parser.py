@@ -217,7 +217,9 @@ class Parser:
                 try:
                     value=int(value) if "." not in value else float(value)
                 except ValueError:
-                    pass
+                    self._error("Could not convert numeric property value", value_tok, "PARPROP003")
+                    self._recover_property()
+                    continue
             if is_style_reference:
                 if value_tok.kind!=TokenKind.STRING:
                     self._error("Style reference must be a string",value_tok,"PARSTYLE005")

@@ -1,4 +1,7 @@
 import unittest
+from unittest.mock import patch
+
+from anzer.diagnostics import DiagnosticCategory
 from anzer.source import Source
 from anzer.lexer import Lexer
 from anzer.parser import Parser
@@ -67,6 +70,31 @@ class DeclarationParserTests(unittest.TestCase):
         props = doc.declarations[0].properties
         self.assertEqual([p.name for p in props], ["text", "width", "active"])
         self.assertEqual([p.value for p in props], ["Go", 120, True])
+
+    def test_numeric_conversion_error_reports_token_location_and_recovers(self):
+        with patch("anzer.parser.int", side_effect=ValueError("conversion failed"), create=True) as convert:
+            doc, lex, errors = self.parse(
+                'anzer make paragraph: width=123, text="kept";\n'
+                'anzer make paragraph: text="also kept";'
+            )
+        convert.assert_called_once_with("123")
+        self.assertEqual(lex, [])
+        error, = errors
+        self.assertEqual((error.category, error.code), (DiagnosticCategory.SYNTAX, "PARPROP003"))
+        self.assertEqual((error.location.line, error.location.column), (2, 29))
+        self.assertEqual(
+            [tuple((prop.name, prop.value) for prop in node.properties) for node in doc.declarations],
+            [(("text", "kept"),), (("text", "also kept"),)],
+        )
+
+    def test_quoted_digits_and_bare_integer_keep_distinct_scalar_types(self):
+        doc, lex, errors = self.parse('anzer make paragraph: text="123", width=120;')
+        self.assertEqual((lex, errors), ([], []))
+        text, width = doc.declarations[0].properties
+        self.assertIs(type(text.value), str)
+        self.assertEqual(text.value, "123")
+        self.assertIs(type(width.value), int)
+        self.assertEqual(width.value, 120)
 
     def test_empty_container(self):
         doc, lex, errors = self.parse("anzer make section {}")

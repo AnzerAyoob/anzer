@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import sysconfig
 import tempfile
 import unittest
@@ -327,6 +328,51 @@ class CompileCommandTests(unittest.TestCase):
         self.assertEqual((bad.returncode, bad.stdout), (1, b""))
         self.assertIn(b"error[syntax/PARDECL002]", bad.stderr)
         self.assertFalse((work / "failed.html").exists())
+
+    def test_installed_check_and_compile_reject_unquoted_numeric_text(self):
+        launcher = _installed_launcher(self)
+        source = self.directory / "scalar.anzer"
+        # Set the boundary in the launcher subprocess only.
+        environment = dict(os.environ, PYTHONINTMAXSTRDIGITS="4300")
+        type_error = b"scalar.anzer:2:23: error[validation/SEMPROP004]: Property 'text' requires a string value"
+        conversion_error = b"scalar.anzer:2:28: error[syntax/PARPROP003]: Could not convert numeric property value"
+        # Early Python 3.10 builds have no integer conversion limit.
+        oversized_error = conversion_error if hasattr(sys, "get_int_max_str_digits") else type_error
+        for digit_count, diagnostic in (
+            (3, type_error),
+            (4300, type_error),
+            (4301, oversized_error),
+        ):
+            digits = "1" * digit_count
+            source.write_bytes(_document(f"anzer make paragraph: text={digits};").encode("utf-8"))
+            entries = set(self.directory.iterdir())
+            for command in ("check", "compile"):
+                with self.subTest(digit_count=digit_count, command=command):
+                    result = subprocess.run(
+                        [str(launcher), command, source.name], cwd=self.directory, env=environment,
+                        capture_output=True, timeout=10,
+                    )
+                    self.assertEqual((result.returncode, result.stdout), (1, b""))
+                    self.assertEqual(result.stderr.splitlines(), [diagnostic])
+                    self.assertEqual(set(self.directory.iterdir()), entries)
+
+    def test_installed_compile_preserves_quoted_digits_and_renders_integer_width(self):
+        launcher = _installed_launcher(self)
+        source = self.directory / "scalar.anzer"
+        digits = "1" * 4301
+        source.write_bytes(_document(f'anzer make paragraph: text="{digits}", width=120;').encode("utf-8"))
+        environment = dict(os.environ, PYTHONINTMAXSTRDIGITS="4300")
+        for command in ("check", "compile"):
+            with self.subTest(command=command):
+                result = subprocess.run(
+                    [str(launcher), command, source.name], cwd=self.directory, env=environment,
+                    capture_output=True, timeout=10,
+                )
+                self.assertEqual((result.returncode, result.stdout, result.stderr), (0, b"", b""))
+        self.assertIn(
+            f'<p style="width: 120px;">{digits}</p>'.encode("utf-8"),
+            source.with_suffix(".html").read_bytes(),
+        )
 
     def test_installed_compile_requires_acknowledgement_and_preserves_trusted_html(self):
         launcher = _installed_launcher(self)

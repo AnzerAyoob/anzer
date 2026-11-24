@@ -1,10 +1,16 @@
 # Examples
 
-Anzer examples currently serve as **syntax design proposals**, not compiler-ready programs.
+## Executable v0.1 example
 
-## Proposal scenarios
+Use the [first-page example in the README](../README.md#compile-your-first-page)
+with the installed v0.1 CLI. Save and compile it in a directory outside the
+checkout to keep the generated HTML with your working files.
 
-See [Syntax Proposals](proposals/README.md) for the current set of examples used to test the language design:
+## Historical design proposals
+
+The files in [Syntax Proposals](proposals/README.md) record earlier design
+scenarios. They contain unsupported syntax and should be read as historical
+material.
 
 - [Landing page](proposals/landing-page.anzer)
 - [Article page](proposals/article-page.anzer)
@@ -12,4 +18,10 @@ See [Syntax Proposals](proposals/README.md) for the current set of examples used
 - [Cards layout](proposals/cards-layout.anzer)
 - [Form interaction](proposals/form-interaction.anzer)
 
-These examples are intentionally provisional. They help identify missing syntax and contradictions before the grammar is finalized and the compiler is built.
+v0.1 supports paragraph style declarations such as `anzer make paragraph style 1:`
+and references such as `use style="paragraph style 1"`. The article, landing,
+and multilingual proposals use the unsupported `type="paragraph"` override.
+The landing proposal also uses unsupported `background` and `on click`
+properties. Native cards, form inputs, and arbitrary click handlers
+are outside v0.1. Use the [v0.1 language specification](../docs/ANZER_V0_1_UNIFIED_SPECIFICATION.md)
+for supported elements, properties, and actions.

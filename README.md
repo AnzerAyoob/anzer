@@ -1,47 +1,93 @@
 # Anzer
 
-**A language intended to unify web authoring—and ultimately replace HTML as the author-facing language.**
+Anzer v0.1 is a command-style language for authoring web pages. Its compiler
+turns a UTF-8 `.anzer` file into an HTML page with CSS and, when a toggle is
+used, compiler-supplied JavaScript. Open the result in a regular browser.
 
-Anzer is an experimental language for describing web structure, styling, and behavior in one readable source file. Anzer source files use the `.anzer` extension.
+## Install from source
 
-## Vision
-
-Anzer's long-term ambition is to become a complete web language and a practical alternative to writing HTML directly—not merely a shorthand that permanently depends on HTML as its authoring language.
-
-That ambition is not yet achieved. The current early compiler milestone targets standard HTML, CSS, and JavaScript so Anzer documents can run in ordinary browsers and be hosted anywhere. Replacing HTML at the authoring level, and potentially through a dedicated runtime or browser ecosystem, is a longer-term goal requiring substantial design and implementation.
-
-## Status
-
-**Pre-alpha / language design.** The syntax, compiler architecture, and scope are still being designed. Examples in this repository are proposals, not implemented guarantees.
-
-## Principles
-
-- Keep structure, styles, and interaction together in a cohesive source file.
-- Make the language distinctive, readable, and approachable without sacrificing precision.
-- Treat HTML output as the current compatibility/compiler milestone, not the ultimate definition of Anzer.
-- Start small, test every feature, and grow through a documented specification.
-
-## Planned workflow
-
-Eventually:
+Anzer requires Python 3.10 or newer. With a virtual environment activated,
+run these commands from the root of your local Anzer Git checkout:
 
 ```sh
-anzer build index.anzer
-anzer dev
+python -m pip install .
+anzer --help
 ```
 
-The first compiler milestone should generate a simple, working website from one `.anzer` file.
+These commands install from the checkout and require no Anzer release on a
+package registry.
 
-## Repository
+## Compile your first page
 
-- `specification/`: versioned language specification
-- `docs/`: design, architecture, roadmap, and contributor documentation
-- `examples/`: proposed and working examples, clearly labeled
+Save this as `hello.anzer` in a directory where you can create files:
 
-## Contributing
+```anzer
+<anzer start>
+anzer make title: text="Hello, Anzer!";
+<anzer end>
+```
 
-The project is early. Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [language design](docs/LANGUAGE_DESIGN.md) before proposing syntax or implementation work.
+Run these commands from that directory:
 
-## License
+```sh
+anzer check hello.anzer
+anzer compile hello.anzer
+```
 
-MIT. See [LICENSE](LICENSE).
+Open `hello.html` in your browser. By default, `compile` replaces the input
+suffix with `.html` and writes beside the source. Set a different destination
+with `-o` or `--output`. Relative output paths are resolved from the current
+working directory, and the parent directory must already exist.
+
+```sh
+anzer compile hello.anzer -o greeting.html
+```
+
+`check` validates source without creating output. Ordinary successful checks
+and compiles are silent. Source diagnostics go to standard error and include
+the source path, category and code, and line and column when available.
+
+The compiler refuses an output path that refers to the input or any existing
+destination. It publishes the completed file atomically without overwriting a
+destination created by another process. Publication requires hard-link support
+in the output filesystem.
+
+| Exit status | Meaning |
+| --- | --- |
+| `0` | Help, successful check, or successful publication |
+| `1` | Source errors, missing trusted HTML acknowledgement, or compiler failure |
+| `2` | Usage, path, or filesystem error, including output collisions |
+
+## Trusted HTML
+
+`anzer use html="...";` embeds explicitly authored raw HTML inside a
+`section` or `container`. `check` validates its placement. Compiling a
+file containing trusted HTML requires `--allow-trusted-html`. The compiler
+emits the HTML as authored, so it can run scripts and affect the entire page.
+Use the flag only when you trust the authored HTML.
+
+```sh
+anzer compile embedded.anzer --allow-trusted-html
+```
+
+A successful publication containing trusted HTML emits a warning on standard
+error and exits with status `0`.
+
+## v0.1 scope
+
+Anzer supports a fixed set of native elements, typed style properties, reusable
+styles, and flex and grid layout. Native button actions are limited to toggling a
+`section` or `container` with a unique ID. Native IDs and toggle targets reject
+literal U+0000. Native text is HTML-escaped.
+
+The CLI provides `check` and `compile`. Open or refresh the generated file in
+your browser after compiling. Development and preview servers, hot reload,
+editor integration, an Anzer package manager, and deployment automation are
+outside v0.1.
+
+- [Language specification](docs/ANZER_V0_1_UNIFIED_SPECIFICATION.md)
+- [CLI contract](docs/ANZER_V0_1_CLI_CONTRACT.md)
+- [Executable and historical examples](examples/README.md)
+- [Contributing](CONTRIBUTING.md)
+
+Anzer is licensed under the [MIT License](LICENSE).

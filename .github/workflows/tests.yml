@@ -60,7 +60,8 @@ jobs:
               root = Path(temporary)
               package = root / "package"
               package.mkdir()
-              shutil.copy2(checkout / "pyproject.toml", package)
+              for filename in ("pyproject.toml", "README.md", "LICENSE"):
+                  shutil.copy2(checkout / filename, package)
               shutil.copytree(checkout / "src", package / "src")
               pip = [sys.executable, "-I", "-m", "pip"]
               subprocess.run([*pip, "install", "."], cwd=package, check=True, timeout=180)
@@ -111,8 +112,8 @@ jobs:
           require_browser = os.environ["REQUIRE_BROWSER"] == "1"
           if require_browser:
               browser_suite = loader.discover("tests", pattern="test_toggle_runtime.py")
-              if browser_suite.countTestCases() < 6:
-                  raise SystemExit("Expected at least six browser runtime cases")
+              if browser_suite.countTestCases() < 8:
+                  raise SystemExit("Expected at least eight browser runtime cases")
               from test_toggle_runtime import _find_browser
 
               browser = _find_browser()

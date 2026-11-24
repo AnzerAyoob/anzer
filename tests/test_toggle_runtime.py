@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
@@ -55,6 +56,36 @@ def _before_runtime(html, source):
     return html.replace("<script>\n", f"<script>{source}</script>\n<script>\n", 1)
 
 
+def _browser_stderr(log, profile):
+    limit = 4096
+    try:
+        with log.open("rb") as stream:
+            size = stream.seek(0, os.SEEK_END)
+            start = max(0, size - limit)
+            stream.seek(max(0, start - 1))
+            partial_line = start > 0 and stream.read(1) != b"\n"
+            tail = stream.read(limit)
+    except OSError:
+        return "Chromium stderr unavailable."
+    if partial_line:
+        # A clipped line may have lost the prefix needed to recognize a secret.
+        tail = tail.partition(b"\n")[2]
+    output = tail.decode("utf-8", errors="replace").strip()
+    if not output:
+        return "Chromium stderr excerpt is empty."
+    for directory in (profile, Path.home()):
+        for spelling in (str(directory), directory.as_posix()):
+            output = output.replace(spelling, "<redacted path>")
+    output = re.sub(r"(?i)\b(?:proxy-)?authorization\s*:[^\r\n]*", "<redacted header>", output)
+    output = re.sub(r"(?i)\b[a-z][a-z0-9+.-]*://\S+", "<redacted URL>", output)
+    output = re.sub(
+        r"""(?<![\w./\\])(?:[A-Za-z]:[\\/]|\\\\|/)[^:\r\n"'<>]+""",
+        "<redacted path>", output,
+    )
+    label = "Chromium stderr tail" if size > limit else "Chromium stderr"
+    return f"{label}: {output!r}"
+
+
 class BrowserToggleTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -70,34 +101,43 @@ class BrowserToggleTests(unittest.TestCase):
 
         profile = tempfile.TemporaryDirectory(prefix="anzer-toggle-", ignore_cleanup_errors=True)
         cls.addClassCleanup(profile.cleanup)
-        cls.browser = subprocess.Popen([
-            browser, "--headless", "--disable-gpu", "--disable-background-networking",
-            "--no-first-run", "--no-default-browser-check", f"--user-data-dir={profile.name}",
-            "--remote-debugging-port=0", "about:blank",
-        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        profile_path = Path(profile.name)
+        stderr_path = profile_path / "chromium-stderr.log"
+        # A regular file lets Chromium write without waiting for a pipe reader.
+        with stderr_path.open("wb") as stderr:
+            cls.browser = subprocess.Popen([
+                browser, "--headless", "--disable-gpu", "--disable-background-networking",
+                "--no-first-run", "--no-default-browser-check", f"--user-data-dir={profile.name}",
+                "--remote-debugging-port=0", "about:blank",
+            ], stdout=subprocess.DEVNULL, stderr=stderr)
         cls.port = None
         cls.addClassCleanup(cls._close_browser)
-        port_file = Path(profile.name) / "DevToolsActivePort"
+        port_file = profile_path / "DevToolsActivePort"
         deadline = time.monotonic() + 20
-        last_permission_error = None
+        port_file_access_denied = False
         while time.monotonic() < deadline and cls.browser.poll() is None:
             try:
                 ports = port_file.read_text(encoding="utf-8").splitlines()
             except FileNotFoundError:
                 pass
-            except PermissionError as error:
+            except PermissionError:
                 if os.name != "nt":
                     raise
                 # Chromium can create the file before releasing its Windows write handle.
-                last_permission_error = error
+                port_file_access_denied = True
             else:
                 if ports and ports[0].isdigit():
                     cls.port = ports[0]
                     return
             time.sleep(0.1)
-        raise RuntimeError(
-            "Chromium did not start its headless DevTools endpoint"
-        ) from last_permission_error
+        status = cls.browser.poll()
+        if status is None:
+            failure = "Chromium was still running after 20 seconds without a usable DevToolsActivePort file."
+        else:
+            failure = f"Chromium exited with status {status} before DevTools was ready."
+        if port_file_access_denied:
+            failure += " Access to DevToolsActivePort was denied during polling."
+        raise RuntimeError(f"{failure}\n{_browser_stderr(stderr_path, profile_path)}")
 
     @classmethod
     def _close_browser(cls):

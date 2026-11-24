@@ -1,3 +1,4 @@
+import json
 import unittest
 from dataclasses import replace
 from html.parser import HTMLParser
@@ -183,6 +184,32 @@ class RendererTests(unittest.TestCase):
         )
         self.assertEqual(_Tags(html).attributes("script"), [{}])
         self.assertLess(html.index("</section>"), html.index("<script>"))
+
+    def test_permitted_unicode_id_and_target_round_trip_with_escaping(self):
+        identifier = '\ufffd cafe\u0301 \U0001f642 & "\'\r\t'
+        quoted = json.dumps(identifier, ensure_ascii=False)
+        html = self.render(
+            f'anzer make button: text="Open", action="toggle", target={quoted};\n'
+            f'anzer make section: id={quoted} {{}}'
+        )
+        escaped = "\ufffd cafe\u0301 \U0001f642 &amp; &quot;&#x27;&#13;\t"
+        self.assertIn(f'id="{escaped}"', html)
+        self.assertIn(f'data-anzer-target="{escaped}"', html)
+        tags = _Tags(html)
+        button, = tags.attributes("button")
+        section, = tags.attributes("section")
+        self.assertEqual(section["id"], identifier)
+        self.assertEqual(button["data-anzer-target"], identifier)
+        self.assertEqual(button["data-anzer-toggle-key"], section["data-anzer-toggle-target"])
+
+    def test_nul_in_text_and_acknowledged_raw_html_remains_permitted(self):
+        html = self.render(
+            'anzer make paragraph: text="A\0B";\n'
+            'anzer make section { anzer use html="<b>C\0D</b>"; }',
+            allow_trusted_html=True,
+        )
+        self.assertIn("<p>A\0B</p>", html)
+        self.assertIn("<section><b>C\0D</b></section>", html)
 
     def test_equivalent_normalized_documents_render_identical_bytes(self):
         a = self.normalize(

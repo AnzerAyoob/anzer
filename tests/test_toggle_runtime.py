@@ -451,6 +451,34 @@ class BrowserToggleTests(unittest.TestCase):
         })()""")
         self.assertEqual(observed, [identifier, identifier, True, "false", False, None])
 
+    def test_replacement_character_and_other_unicode_ids_toggle_independently(self):
+        identifiers = ("\ufffd", "cafe\u0301 \U0001f642")
+        declarations = []
+        for identifier in identifiers:
+            quoted = json.dumps(identifier, ensure_ascii=False)
+            declarations.extend((
+                f'anzer make button: text="Toggle", action="toggle", target={quoted};',
+                f'anzer make section: id={quoted}, text="Target" {{}}',
+            ))
+        html = self.render("\n".join(declarations))
+        observed = self.evaluate(html, """(() => {
+            const buttons = Array.from(document.querySelectorAll("button"));
+            const targets = Array.from(document.querySelectorAll("section"));
+            const read = () => targets.map((target, index) => [
+                target.id, buttons[index].getAttribute("data-anzer-target"),
+                target.hidden, Boolean(target.getClientRects().length),
+                buttons[index].getAttribute("aria-expanded")
+            ]);
+            const initial = read();
+            buttons[0].click();
+            const first = read();
+            buttons[1].click();
+            return [initial, first, read()];
+        })()""")
+        visible = [[value, value, False, True, "true"] for value in identifiers]
+        hidden = [[value, value, True, False, "false"] for value in identifiers]
+        self.assertEqual(observed, [visible, [hidden[0], visible[1]], hidden])
+
 
 if __name__ == "__main__":
     unittest.main()

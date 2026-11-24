@@ -285,6 +285,14 @@ def _valid_url(value, *, mailto):
         return False
 
 
+def _identifier_error(value: str) -> str | None:
+    if not value.strip():
+        return "must not be empty"
+    if "\0" in value:
+        return "must not contain U+0000"
+    return None
+
+
 def _resolve_gap_layer(
     layer: Mapping[str, PropertyAssignment],
 ) -> Mapping[str, PropertyAssignment]:
@@ -510,12 +518,13 @@ class SemanticValidator:
             self._invalid(f"Property '{name}' is not allowed on '{kind}'", prop.span, "SEMPROP001")
         elif not isinstance(value, str):
             self._invalid(f"Property '{name}' requires a string value", prop.span, "SEMPROP004")
-        elif name == "id" and not value.strip():
-            self._error("Container id must not be empty", prop.span, "SEMID002")
+        elif name in {"id", "target"}:
+            reason = _identifier_error(value)
+            if reason is not None:
+                label, code = ("Container id", "SEMID002") if name == "id" else ("Toggle target", "SEMACT002")
+                self._error(f"{label} {reason}", prop.span, code)
         elif name == "action" and value != "toggle":
             self._error(f"Unsupported button action '{value}'", prop.span, "SEMACT001")
-        elif name == "target" and not value.strip():
-            self._error("Toggle target must not be empty", prop.span, "SEMACT002")
         elif name in {"url", "src"} and not _valid_url(value, mailto=name == "url"):
             code = "SEMURL001" if name == "url" else "SEMURL002"
             self._invalid(f"Invalid or unsupported URL for '{name}'", prop.span, code)
@@ -542,7 +551,7 @@ class SemanticValidator:
                     self._invalid(message, first.span, code)
 
     def _collect_id(self, prop, eligible, reference_span):
-        if prop is None or not isinstance(prop.value, str) or not prop.value.strip():
+        if prop is None or not isinstance(prop.value, str) or _identifier_error(prop.value):
             return
         if not eligible:
             self._invalid_target_ids.add(prop.value)
@@ -554,12 +563,14 @@ class SemanticValidator:
 
     def _validate_toggle(self, properties, reference_valid):
         action, target = properties.get("action"), properties.get("target")
+        if target is not None and (not isinstance(target.value, str) or _identifier_error(target.value)):
+            return
         if action is None:
-            if target is not None and isinstance(target.value, str) and target.value.strip() and reference_valid:
+            if target is not None and reference_valid:
                 self._error("Button target requires action='toggle'", target.span, "SEMACT003")
         elif action.value == "toggle":
             if target is None:
                 if reference_valid:
                     self._error("Toggle action requires target", action.span, "SEMACT002")
-            elif isinstance(target.value, str) and target.value.strip():
+            else:
                 self._targets.append(target)

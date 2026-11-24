@@ -1,3 +1,4 @@
+import json
 import unittest
 from dataclasses import replace
 
@@ -284,6 +285,61 @@ class SemanticValidatorTests(unittest.TestCase):
             'anzer make button: text="x", action="toggle", target="leaf";'
         )
         self.assertIn("must identify a section or container block", errors[-1].message)
+
+    def test_nul_in_native_id_is_rejected_without_collection(self):
+        for value in ("\0ab", "a\0b", "ab\0"):
+            for kind, column in (("section", 21), ("container", 23)):
+                with self.subTest(value=value, kind=kind):
+                    validator = SemanticValidator()
+                    document = self.parse(f'anzer make {kind}: id="{value}" {{}}')
+                    error, = validator.validate(document)
+                    self.assertEqual((error.category, error.code), (DiagnosticCategory.SEMANTIC, "SEMID002"))
+                    self.assertEqual((error.location.line, error.location.column), (2, column))
+                    self.assertIn("U+0000", error.message)
+                    self.assertEqual(validator._ids, {})
+
+    def test_nul_in_toggle_target_is_rejected_without_resolution(self):
+        for value in ("\0ab", "a\0b", "ab\0"):
+            with self.subTest(value=value):
+                validator = SemanticValidator()
+                document = self.parse(f'anzer make button: text="x", action="toggle",\n  target="{value}";')
+                error, = validator.validate(document)
+                self.assertEqual((error.category, error.code), (DiagnosticCategory.SEMANTIC, "SEMACT002"))
+                self.assertEqual((error.location.line, error.location.column), (3, 3))
+                self.assertIn("U+0000", error.message)
+                self.assertEqual(validator._targets, [])
+
+    def test_nul_collision_reports_only_invalid_fields_in_source_order(self):
+        validator = SemanticValidator()
+        document = self.parse(
+            'anzer make button: text="A", action="toggle",\n'
+            '  target="\0";\n'
+            'anzer make button: text="B", action="toggle", target="\ufffd";\n'
+            'anzer make section: id="\0" {}\n'
+            'anzer make section: id="\ufffd" {}'
+        )
+        errors = validator.validate(document)
+        self.assertEqual(
+            [(error.code, error.location.line, error.location.column) for error in errors],
+            [("SEMACT002", 3, 3), ("SEMID002", 5, 21)],
+        )
+        self.assertEqual(tuple(validator._ids), ("\ufffd",))
+        self.assertEqual([target.value for target in validator._targets], ["\ufffd"])
+        self.assertEqual(validator.validate(document), errors)
+
+    def test_permitted_unicode_ids_resolve_without_normalization(self):
+        identifiers = ("\ufffd", "café", "cafe\u0301", "\U0001f642", "panel\tA\r&B \"#'")
+        declarations = []
+        for value in identifiers:
+            quoted = json.dumps(value, ensure_ascii=False)
+            declarations.extend((
+                f'anzer make button: text="Open", action="toggle", target={quoted};',
+                f'anzer make section: id={quoted} {{}}',
+            ))
+        validator = SemanticValidator()
+        self.assertEqual(validator.validate(self.parse("\n".join(declarations))), [])
+        self.assertEqual(tuple(validator._ids), identifiers)
+        self.assertEqual(tuple(target.value for target in validator._targets), identifiers)
 
     def test_duplicate_ids_report_the_later_declaration_without_target_cascades(self):
         errors = self.validate(

@@ -374,6 +374,59 @@ class CompileCommandTests(unittest.TestCase):
             source.with_suffix(".html").read_bytes(),
         )
 
+    def test_installed_check_and_compile_reject_nul_ids_and_targets_without_publication(self):
+        launcher = _installed_launcher(self)
+        source = self.directory / "collision.anzer"
+        output = source.with_suffix(".html")
+        original = _document(
+            'anzer make button: text="A", action="toggle",\n'
+            '  target="\0";\n'
+            'anzer make button: text="B", action="toggle", target="\ufffd";\n'
+            'anzer make section: id="\0" {}\n'
+            'anzer make section: id="\ufffd" {}'
+        ).encode("utf-8")
+        source.write_bytes(original)
+        diagnostics = [
+            b"collision.anzer:3:3: error[semantic/SEMACT002]: Toggle target must not contain U+0000",
+            b"collision.anzer:5:21: error[semantic/SEMID002]: Container id must not contain U+0000",
+        ]
+        for existing in (None, b"existing output"):
+            if existing is not None:
+                output.write_bytes(existing)
+            entries = set(self.directory.iterdir())
+            for command in ("check", "compile"):
+                with self.subTest(command=command, existing=existing is not None):
+                    result = subprocess.run(
+                        [str(launcher), command, source.name], cwd=self.directory,
+                        capture_output=True, timeout=10,
+                    )
+                    self.assertEqual((result.returncode, result.stdout), (1, b""))
+                    self.assertEqual(result.stderr.splitlines(), diagnostics)
+                    self.assertEqual(source.read_bytes(), original)
+                    self.assertEqual(set(self.directory.iterdir()), entries)
+                    if existing is not None:
+                        self.assertEqual(output.read_bytes(), existing)
+
+    def test_installed_check_and_compile_preserve_replacement_character_id(self):
+        launcher = _installed_launcher(self)
+        source = self.directory / "unicode.anzer"
+        source.write_bytes(_document(
+            'anzer make button: text="Open", action="toggle", target="\ufffd";\n'
+            'anzer make section: id="\ufffd" {}'
+        ).encode("utf-8"))
+        output = source.with_suffix(".html")
+        for command in ("check", "compile"):
+            with self.subTest(command=command):
+                result = subprocess.run(
+                    [str(launcher), command, source.name], cwd=self.directory,
+                    capture_output=True, timeout=10,
+                )
+                self.assertEqual((result.returncode, result.stdout, result.stderr), (0, b"", b""))
+                self.assertEqual(output.exists(), command == "compile")
+        html = output.read_bytes()
+        self.assertIn(b'id="\xef\xbf\xbd"', html)
+        self.assertIn(b'data-anzer-target="\xef\xbf\xbd"', html)
+
     def test_installed_compile_requires_acknowledgement_and_preserves_trusted_html(self):
         launcher = _installed_launcher(self)
         source = self.directory / "trusted.anzer"

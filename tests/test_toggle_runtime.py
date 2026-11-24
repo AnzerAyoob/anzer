@@ -4,6 +4,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import unittest
@@ -20,10 +21,17 @@ from test_cli_check import _document, _installed_launcher
 
 
 _BROWSER_BRIDGE = Path(__file__).with_name("run_browser.cjs")
+_LINUX_STABLE_CHROME = ("google-chrome-stable", "google-chrome")
+_LINUX_NO_STABLE_CHROME = "Packaged stable Google Chrome (google-chrome-stable or google-chrome) was not found on PATH."
 
 
 def _find_browser():
-    for name in ("chromium", "chromium-browser", "google-chrome", "chrome", "msedge"):
+    linux = sys.platform.startswith("linux")
+    names = (
+        (*_LINUX_STABLE_CHROME, "chromium", "chromium-browser", "chrome", "msedge")
+        if linux else ("chromium", "chromium-browser", "google-chrome", "chrome", "msedge")
+    )
+    for name in names:
         executable = shutil.which(name)
         if executable:
             return executable
@@ -34,6 +42,8 @@ def _find_browser():
                 executable = Path(base) / path
                 if executable.is_file():
                     return str(executable)
+    if linux:
+        print(_LINUX_NO_STABLE_CHROME, file=sys.stderr)
     return None
 
 
@@ -137,6 +147,8 @@ class BrowserToggleTests(unittest.TestCase):
             failure = f"Chromium exited with status {status} before DevTools was ready."
         if port_file_access_denied:
             failure += " Access to DevToolsActivePort was denied during polling."
+        if sys.platform.startswith("linux") and Path(browser).name not in _LINUX_STABLE_CHROME:
+            failure += f" {_LINUX_NO_STABLE_CHROME}"
         raise RuntimeError(f"{failure}\n{_browser_stderr(stderr_path, profile_path)}")
 
     @classmethod

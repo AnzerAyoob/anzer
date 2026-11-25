@@ -1,0 +1,111 @@
+name: Publish Anzer v0.1.0 to PyPI
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Select publish-anzer-v0.1.0 to authorize this production upload'
+        required: true
+        type: choice
+        options:
+          - do-not-publish
+          - publish-anzer-v0.1.0
+
+permissions:
+  contents: read
+
+concurrency:
+  group: anzer-pypi-v0.1.0
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Verify exact GitHub release assets and publish to PyPI
+    if: github.repository == 'AnzerAyoob/anzer' && github.ref == 'refs/heads/main' && inputs.confirm == 'publish-anzer-v0.1.0'
+    runs-on: ubuntu-24.04
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Verify release identity, tag, and exact two-asset inventory
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+
+          repo = os.environ['GITHUB_REPOSITORY']
+          def api(path):
+              return json.loads(subprocess.check_output(['gh', 'api', f'repos/{repo}/{path}'], text=True))
+
+          release = api('releases/456876504')
+          assert release['tag_name'] == 'v0.1.0', 'Wrong release tag'
+          assert release['name'] == 'Anzer v0.1.0', 'Wrong release title'
+          assert not release['draft'] and not release['prerelease'], 'Release not public/stable'
+          assert release['id'] == 456876504, 'Wrong release ID'
+
+          ref = api('git/ref/tags/v0.1.0')
+          assert ref['object']['type'] == 'tag', 'Tag is not annotated'
+          assert ref['object']['sha'] == 'e09e5a6d1107ace83e6a082d7ae9916101cea670', 'Wrong annotated tag object'
+          tag = api('git/tags/e09e5a6d1107ace83e6a082d7ae9916101cea670')
+          assert tag['object']['type'] == 'commit', 'Tag does not point to a commit'
+          assert tag['object']['sha'] == '5c342c654c36c55f6ac6694917c40e03c81f5bf3', 'Wrong source commit'
+
+          expected = {
+              'anzer-0.1.0-py3-none-any.whl': (787517759, 31407, '68bac7c986a8f592f07ef16fd5f64c96cc15777bb935e39a492320d4d1b6e7f4'),
+              'anzer-0.1.0.tar.gz': (787517760, 66551, '4be5ec27e5af43cb96b7bba7e895a8afaf2e2849b1dca7ae6ab8acc6a1632b71'),
+          }
+          assets = release['assets']
+          assert len(assets) == 2, 'Unexpected release asset count'
+          assert {a['name'] for a in assets} == set(expected), 'Unexpected release asset names'
+          for asset in assets:
+              expected_id, expected_size, expected_sha = expected[asset['name']]
+              assert asset['id'] == expected_id, 'Unexpected release asset ID'
+              assert asset['size'] == expected_size, 'Unexpected release asset size'
+              assert asset.get('state') == 'uploaded', 'Release asset is not ready'
+              if asset.get('digest'):
+                  assert asset['digest'] == f'sha256:{expected_sha}', 'Release asset digest mismatch'
+          print('Release ID, annotated tag, source commit, and exact asset inventory verified.')
+          PY
+
+      - name: Download existing distribution files (no builds)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          gh release download v0.1.0 --repo "$GITHUB_REPOSITORY" --dir dist \
+            --pattern 'anzer-0.1.0-py3-none-any.whl' \
+            --pattern 'anzer-0.1.0.tar.gz'
+
+      - name: Verify downloaded file count, sizes, and SHA-256
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          expected = {
+              'anzer-0.1.0-py3-none-any.whl': (31407, '68bac7c986a8f592f07ef16fd5f64c96cc15777bb935e39a492320d4d1b6e7f4'),
+              'anzer-0.1.0.tar.gz': (66551, '4be5ec27e5af43cb96b7bba7e895a8afaf2e2849b1dca7ae6ab8acc6a1632b71'),
+          }
+          files = list(Path('dist').iterdir())
+          assert all(p.is_file() and not p.is_symlink() for p in files), 'Unexpected dist entry'
+          assert {p.name for p in files} == set(expected), 'Unexpected distribution inventory'
+          for p in files:
+              size, digest = expected[p.name]
+              assert p.stat().st_size == size, f'Wrong size: {p.name}'
+              assert hashlib.sha256(p.read_bytes()).hexdigest() == digest, f'Wrong SHA-256: {p.name}'
+              print(f'VERIFIED {p.name}: {digest}')
+          PY
+
+      - name: Publish exactly verified files to production PyPI via OIDC
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/

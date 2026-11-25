@@ -1,22 +1,24 @@
-# Anzer Language Specification — v0.1
+# Anzer language specification · v0.1
 
-**Status:** Frozen for implementation. This file is a navigation/authority notice, not an independent specification.
-
-The earlier draft in this file is superseded. It contained provisional grammar, unresolved decisions, and output assumptions that no longer match the v0.1 freeze.
+This page points to the frozen references for the v0.1 language and compiler.
+Earlier drafts and stress tests remain useful as design history.
 
 ## Authoritative documents
-- [Unified specification: `docs/ANZER_V0_1_UNIFIED_SPECIFICATION.md`
-- Decision freeze: `docs/ANZER_V0_1_DECISION_FREEZE_1.md`
-- Definitive compiler test checklist: `docs/ANZER_V0_1_GRAMMAR_TEST_CHECKLIST.md`
 
-Implement v0.1 against those documents. Historical syntax explorations and stress tests are supplemental test material only; they must not override the frozen specification.
+- [Unified language specification](../docs/ANZER_V0_1_UNIFIED_SPECIFICATION.md)
+- [Language decision freeze](../docs/ANZER_V0_1_DECISION_FREEZE_1.md)
+- [CLI contract](../docs/ANZER_V0_1_CLI_CONTRACT.md)
+- [Toggle runtime contract](../docs/ANZER_V0_1_TOGGLE_RUNTIME_CONTRACT.md)
+- [Grammar and compiler test checklist](../docs/ANZER_V0_1_GRAMMAR_TEST_CHECKLIST.md)
 
 ## Frozen compiler contract
-- Source: `.anzer`
-- Check: `anzer check input.anzer`
-- Compile: `anzer compile input.anzer [-o output.html]`
-- Default output: `input.html`
-- One self-contained HTML output; CSS embedded; JavaScript only when required.
-- Compiler errors prevent output; no partial output.
 
-The HTML output is a v0.1 browser-compatibility artifact, not a change to Anzer's long-term goal of becoming the primary author-facing web language.
+- Source files use the `.anzer` extension.
+- `anzer check input.anzer` validates the source.
+- `anzer compile input.anzer` writes `input.html` beside the source by default.
+  Use `-o output.html` to choose another destination.
+- The compiler emits a complete HTML file with embedded CSS and JavaScript for
+  native toggles when required. It publishes output only after successful
+  analysis and rendering.
+
+[Language overview](../docs/LANGUAGE_OVERVIEW.md) · [Runnable examples](../examples/README.md)

@@ -1,22 +1,38 @@
 # Contributing to Anzer
 
-Anzer is at the language-design stage. Contributions should help make the language coherent and practical rather than simply add features.
+Anzer v0.1.0 has a published compiler and a frozen language specification. Start
+with the behavior of the released CLI when reporting a bug or proposing a
+change. [Language specification](docs/ANZER_V0_1_UNIFIED_SPECIFICATION.md) · [CLI contract](docs/ANZER_V0_1_CLI_CONTRACT.md)
 
 ## Before proposing changes
 
-1. Read the vision, overview, language design, syntax, web architecture, and specification.
-2. Search existing decisions in `docs/DECISIONS.md`.
-3. Explain the problem and provide a small example of proposed syntax.
-4. Discuss trade-offs and compatibility implications.
+1. Check the current specification and the [decision log](docs/DECISIONS.md).
+2. Describe the problem with a small `.anzer` document or CLI invocation.
+3. Explain the expected behavior, trade-offs, and compatibility implications.
+
+## Local development
+
+Use Python 3.10 or newer. From the repository root, with a virtual environment
+active, install the checkout and run the test suite.
+
+```bash
+python -m pip install -e .
+python -m unittest discover -s tests -v
+```
+
+The hosted test matrix also includes a required browser run for native toggles
+on Ubuntu with Python 3.12. See the [test workflow](.github/workflows/tests.yml)
+for its browser and Node.js prerequisites.
 
 ## Development principles
 
-- Keep the initial scope small.
-- Prefer explicit, predictable syntax.
-- Avoid unnecessary complexity and magic behavior.
-- Treat generated HTML, CSS, and JavaScript as inspectable output.
-- Do not claim a feature is implemented until it has tests and working compiler support.
+- Keep syntax explicit and behavior predictable.
+- Keep generated HTML, CSS, and JavaScript inspectable.
+- Document implemented behavior and cover compiler changes with tests.
 
 ## Issues and pull requests
 
-Use issues for proposals and bugs. PRs should include rationale, documentation, tests where applicable, and a clear statement of behavior changes.
+Include the command, input, expected result, and observed diagnostics when
+reporting a bug. For pull requests, describe the motivation, user-visible
+changes, and validation performed.
+[Issue tracker](https://github.com/AnzerAyoob/anzer/issues) · [Code of conduct](CODE_OF_CONDUCT.md) · [Security reporting](SECURITY.md)
